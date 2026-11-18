@@ -1,13 +1,18 @@
 from sqlalchemy.orm import Session
 from fastapi import Depends,HTTPException,status
 from src.utils.db import get_db
-from src.musicians.dtos import registration_info
+from src.musicians.dtos import registration_info,login_info
 from src.musicians.models import musicians
 from pwdlib import PasswordHash
+import jwt
+from datetime import datetime,timedelta
+from src.utils.settings import settings
 password_hash=PasswordHash.recommended()
 def get_hashed_password(password):
     return password_hash.hash(password)
 
+def verify_password(password,hashed_password):
+    return password_hash.verify(password,hashed_password)
 
 def register_musician(user:registration_info,db:Session=Depends(get_db)):
     existing_user=db.query(musicians).filter(user.email==musicians.email).first()
@@ -19,3 +24,12 @@ def register_musician(user:registration_info,db:Session=Depends(get_db)):
     db.commit()
     db.refresh(musician)
     return musician
+
+def login_musician(user:login_info,db:Session=Depends(get_db)):
+    correct_user=db.query(musicians).filter(user.email==musicians.email).first()
+    correct_password=verify_password(user.password,correct_user.password)
+    if correct_user and correct_password:
+        exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)
+        token=jwt.encode({"user_id":correct_user.musician_id,"exp_time":exp_time.timestamp()},settings.SECRET_KEY,settings.ALGORITHM)
+        return {"token":token}
+    raise HTTPException(status_code=401,detail="Incorrect password or username")

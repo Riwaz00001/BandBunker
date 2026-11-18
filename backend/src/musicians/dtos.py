@@ -9,3 +9,7 @@ class registration_info(BaseModel):
 class registration_response(BaseModel):
     email:str
     role:str
+
+class login_info(BaseModel):
+    email:str
+    password:str
