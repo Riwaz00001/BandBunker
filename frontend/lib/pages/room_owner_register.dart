@@ -1,5 +1,9 @@
 
 import 'package:flutter/material.dart';
+import '../clients/owner_client.dart';
+import '../clients/musician_client.dart';
+import '../models/owner_models.dart';
+import '../helpers/alert_helper.dart';
 
 class RoomOwnerRegisterPage extends StatefulWidget {
   const RoomOwnerRegisterPage({super.key});
@@ -217,30 +221,33 @@ class _RoomOwnerRegisterPageState
     );
   }
 
-  void createOwnerAccount() {
+  Future<void> createOwnerAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (!acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please accept the Terms and Conditions',
-          ),
-        ),
-      );
+      AlertHelper.error(context, 'Please accept the Terms and Conditions');
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Owner registration details completed!'),
-      ),
+    final request = OwnerRegisterRequest(
+      name: ownerNameController.text.trim(),
+      studio: studioNameController.text.trim(),
+      email: emailController.text.trim(),
+      number: phoneController.text.trim(),
+      location: locationController.text.trim(),
+      roomType: selectedRoomType,
+      password: passwordController.text,
     );
 
-    // Backend/Firebase registration will be connected later.
-    debugPrint('Owner: ${ownerNameController.text}');
-    debugPrint('Studio: ${studioNameController.text}');
-    debugPrint('Room Type: $selectedRoomType');
+    try {
+      await OwnerClient.instance.register(request);
+      if (!mounted) return;
+      AlertHelper.success(context, 'Owner registration successful!');
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      AlertHelper.error(context, e.message);
+    }
   }
 
   @override
