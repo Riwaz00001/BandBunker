@@ -11,7 +11,7 @@ class registration_info(BaseModel):
 
 class registration_response(BaseModel):
     email:str
-    number:str
+    number:int
 
 class login_info(BaseModel):
     email:str

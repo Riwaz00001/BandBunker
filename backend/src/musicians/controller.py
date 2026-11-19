@@ -27,9 +27,9 @@ def register_musician(user:registration_info,db:Session=Depends(get_db)):
 
 def login_musician(user:login_info,db:Session=Depends(get_db)):
     correct_user=db.query(musicians).filter(user.email==musicians.email).first()
-    correct_password=verify_password(user.password,correct_user.password)
-    if correct_user and correct_password:
-        exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)
-        token=jwt.encode({"user_id":correct_user.musician_id,"exp_time":exp_time.timestamp()},settings.SECRET_KEY,settings.ALGORITHM)
-        return {"token":token}
-    raise HTTPException(status_code=401,detail="Incorrect password or username")
+    if not correct_user or verify_password(user.password,correct_user.password):
+        raise HTTPException(status_code=401,detail="Incorrect password or username")
+
+    exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)
+    token=jwt.encode({"user_id":correct_user.musician_id,"exp_time":exp_time.timestamp()},settings.SECRET_KEY,settings.ALGORITHM)
+    return {"token":token}

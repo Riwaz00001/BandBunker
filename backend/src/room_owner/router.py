@@ -12,5 +12,5 @@ def register(user:registration_info,db:Session=Depends(get_db)):
     return register_owner(user,db)
 
 @owners_router.post("/login",status_code=status.HTTP_200_OK)
-def register(user:login_info,db:Session=Depends(get_db)):
+def login(user:login_info,db:Session=Depends(get_db)):
     return login_owner(user,db)
