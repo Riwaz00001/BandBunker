@@ -7,7 +7,7 @@ class owners(Base):
     name=Column(String,nullable=False)
     studio=Column(String,nullable=False)
     email=Column(String,nullable=False)
-    number=Column(Integer,nullable=False)
+    number=Column(String,nullable=False)
     location=Column(String,nullable=False)
     room_type=Column(String,nullable=False)
     password=Column(String,nullable=False)
