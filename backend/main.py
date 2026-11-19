@@ -1,6 +1,7 @@
 from fastapi import FastAPI,HTTPException
 from src.utils.db import Base,engine
 from src.musicians.models import musicians
+from src.room_owner.models import owners
 from src.musicians.router import musicians_router
 from src.room_owner.router import owners_router
 Base.metadata.create_all(engine)

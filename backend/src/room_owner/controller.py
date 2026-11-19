@@ -27,7 +27,7 @@ def register_owner(user:registration_info,db:Session=Depends(get_db)):
 
 def login_owner(user:login_info,db:Session=Depends(get_db)):
     correct_user=db.query(owners).filter(user.email==owners.email).first()
-    if not correct_user or verify_password(user.password,correct_user.password):
+    if not correct_user or not verify_password(user.password,correct_user.password):
             raise HTTPException(status_code=401,detail="Incorrect password or username")
     
     exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)

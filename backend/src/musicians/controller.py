@@ -27,7 +27,7 @@ def register_musician(user:registration_info,db:Session=Depends(get_db)):
 
 def login_musician(user:login_info,db:Session=Depends(get_db)):
     correct_user=db.query(musicians).filter(user.email==musicians.email).first()
-    if not correct_user or verify_password(user.password,correct_user.password):
+    if not correct_user or not verify_password(user.password,correct_user.password):
         raise HTTPException(status_code=401,detail="Incorrect password or username")
 
     exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)
