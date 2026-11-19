@@ -19,7 +19,7 @@ def register_owner(user:registration_info,db:Session=Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400,detail="Email already in use!")
     password=get_hashed_password(user.password)
-    owner=owners(name=user.name,studio=user.studio,email=user.email,number=user.number,location=user.location,room_type=user.room_type,password=password,)
+    owner=owners(name=user.name,studio=user.studio,email=user.email,number=user.number,location=user.location,room_type=user.room_type,password=password)
     db.add(owner)
     db.commit()
     db.refresh(owner)
