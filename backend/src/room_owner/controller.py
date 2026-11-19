@@ -33,3 +33,4 @@ def login_owner(user:login_info,db:Session=Depends(get_db)):
     exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)
     token=jwt.encode({"user_id":correct_user.owner_id,"exp_time":exp_time.timestamp()},settings.SECRET_KEY,settings.ALGORITHM)
     return {"token":token}
+
