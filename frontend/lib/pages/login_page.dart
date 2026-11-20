@@ -1,6 +1,13 @@
 
 import 'package:flutter/material.dart';
 import 'role_selection.dart';
+import '../clients/musician_client.dart';
+import '../clients/owner_client.dart';
+import '../models/musician_models.dart';
+import '../models/owner_models.dart';
+import '../services/token_storage.dart';
+import 'musician_dashboard.dart';
+import 'owner_dashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
 
   bool isPasswordVisible = false;
+  bool isOwner = false;
 
   // Navigate to role selection
   void openRegistration() {
@@ -33,14 +41,44 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Login button - UI only for now
-  void login() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login interface completed!'),
-        ),
-      );
+  void login() async {
+    if (!_formKey.currentState!.validate()) return;
+    try {
+      if (isOwner) {
+        final token = await OwnerClient.instance.login(
+          OwnerLoginRequest(
+            email: emailController.text.trim(),
+            password: passwordController.text,
+          ),
+        );
+        await TokenStorage.saveOwnerToken(token);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const owner_dashboard()),
+          );
+        }
+      } else {
+        final token = await MusicianClient.instance.login(
+          LoginRequest(
+            email: emailController.text.trim(),
+            password: passwordController.text,
+          ),
+        );
+        await TokenStorage.saveMusicianToken(token);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const musician_dashboard()),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     }
   }
 
@@ -258,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
                       // Email
                       buildInputField(
                         label: 'Email Address',
-                        hint: 'musician@gmail.com',
+                        hint: 'user@gmail.com',
                         icon: Icons.email_outlined,
                         controller: emailController,
                       ),
@@ -277,6 +315,25 @@ class _LoginPageState extends State<LoginPage> {
                       ),
 
                       const SizedBox(height: 35),
+
+                      // Role toggle
+                      Row(
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Musician'),
+                            selected: !isOwner,
+                            onSelected: (_) => setState(() => isOwner = false),
+                          ),
+                          const SizedBox(width: 10),
+                          ChoiceChip(
+                            label: const Text('Owner'),
+                            selected: isOwner,
+                            onSelected: (_) => setState(() => isOwner = true),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 25),
 
                       // Login button
                       SizedBox(

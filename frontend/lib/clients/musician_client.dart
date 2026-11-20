@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/musician_models.dart';
+import '../services/token_storage.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -24,9 +25,15 @@ class MusicianClient {
       ),
     );
 
-    if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
-    }
+    _dio.interceptors.add(QueuedInterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await TokenStorage.getMusicianToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+    ));
   }
 
   static const String _baseUrl = String.fromEnvironment(
@@ -46,6 +53,15 @@ class MusicianClient {
       );
 
       return RegisterResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<String> login(LoginRequest request) async {
+    try {
+      final response = await _dio.post('/musician/login', data: request.toJson());
+      return (response.data as Map<String, dynamic>)['token'] as String;
     } on DioException catch (e) {
       throw _mapDioError(e);
     }

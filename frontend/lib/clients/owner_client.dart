@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/owner_models.dart';
+import '../services/token_storage.dart';
 import 'musician_client.dart';
 
 class OwnerClient {
@@ -15,9 +16,15 @@ class OwnerClient {
       ),
     );
 
-    if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
-    }
+    _dio.interceptors.add(QueuedInterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await TokenStorage.getOwnerToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+    ));
   }
 
   static const String _baseUrl = String.fromEnvironment(
@@ -37,6 +44,15 @@ class OwnerClient {
       );
 
       return OwnerRegisterResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<String> login(OwnerLoginRequest request) async {
+    try {
+      final response = await _dio.post('/owner/login', data: request.toJson());
+      return (response.data as Map<String, dynamic>)['token'] as String;
     } on DioException catch (e) {
       throw _mapDioError(e);
     }
