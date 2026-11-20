@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/login_page.dart';
 
 class RoomOwnerRegisterPage extends StatefulWidget {
   const RoomOwnerRegisterPage({super.key});
@@ -442,7 +443,12 @@ class _RoomOwnerRegisterPageState
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                      );
                     },
                     child: const Text.rich(
                       TextSpan(
