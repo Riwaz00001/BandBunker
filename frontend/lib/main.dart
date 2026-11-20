@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+import 'package:frontend/screens/splash_screen.dart';
+import 'pages/register.dart';
+import 'pages/role_selection.dart';
+import 'pages/room_owner_register.dart';
 
 void main() {
   runApp(const BandBunker());
@@ -14,24 +17,13 @@ class BandBunker extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Band Bunker',
       theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.orange,
-          brightness: Brightness.light,),
-      ),
-      darkTheme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.orange,
-          brightness: Brightness.dark,
-        ),
+        useMaterial3: true,
       ),
-      themeMode: ThemeMode.system,
 
       // First screen when application starts
-      home: SplashScreen(),
+      home: const SplashScreen(),
     );
   }
 }

@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/login_page.dart';
 import 'package:frontend/pages/role_selection.dart';
 import 'package:frontend/widgets/app_logo.dart';
 
@@ -24,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => RoleSelectionPage(),
+          builder: (context) => LoginPage(),
         ),
       );
     });
