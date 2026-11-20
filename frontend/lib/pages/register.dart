@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:frontend/pages/login_page.dart';
 
 import '../clients/musician_client.dart';
 import '../helpers/alert_helper.dart';
@@ -796,7 +797,12 @@ class _RegisterPageState extends State<RegisterPage> {
                         GestureDetector(
 
                           onTap: () {
-                            // Navigate to LoginPage here.
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginPage(),
+                              ),
+                            );
                           },
 
                           child: const Text(

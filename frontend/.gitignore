@@ -1,5 +1,5 @@
 .idea/
-# Flutter / Dart build artifacts and caches (usually the biggest culprit)
+.idea/
 build/
 .dart_tool/
 .flutter-plugins

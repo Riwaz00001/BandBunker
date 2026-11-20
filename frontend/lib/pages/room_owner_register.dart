@@ -1,9 +1,6 @@
 
 import 'package:flutter/material.dart';
-import '../clients/owner_client.dart';
-import '../clients/musician_client.dart';
-import '../models/owner_models.dart';
-import '../helpers/alert_helper.dart';
+import 'package:frontend/pages/login_page.dart';
 
 class RoomOwnerRegisterPage extends StatefulWidget {
   const RoomOwnerRegisterPage({super.key});
@@ -221,33 +218,30 @@ class _RoomOwnerRegisterPageState
     );
   }
 
-  Future<void> createOwnerAccount() async {
+  void createOwnerAccount() {
     if (!_formKey.currentState!.validate()) return;
 
     if (!acceptedTerms) {
-      AlertHelper.error(context, 'Please accept the Terms and Conditions');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please accept the Terms and Conditions',
+          ),
+        ),
+      );
       return;
     }
 
-    final request = OwnerRegisterRequest(
-      name: ownerNameController.text.trim(),
-      studio: studioNameController.text.trim(),
-      email: emailController.text.trim(),
-      number: phoneController.text.trim(),
-      location: locationController.text.trim(),
-      roomType: selectedRoomType,
-      password: passwordController.text,
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Owner registration details completed!'),
+      ),
     );
 
-    try {
-      await OwnerClient.instance.register(request);
-      if (!mounted) return;
-      AlertHelper.success(context, 'Owner registration successful!');
-      Navigator.pop(context);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      AlertHelper.error(context, e.message);
-    }
+    // Backend/Firebase registration will be connected later.
+    debugPrint('Owner: ${ownerNameController.text}');
+    debugPrint('Studio: ${studioNameController.text}');
+    debugPrint('Room Type: $selectedRoomType');
   }
 
   @override
@@ -449,7 +443,12 @@ class _RoomOwnerRegisterPageState
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                      );
                     },
                     child: const Text.rich(
                       TextSpan(
