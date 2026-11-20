@@ -1,75 +1,28 @@
 .idea/
-
-# ==============================
-# Flutter / Dart
-# ==============================
-
-.dart_tool/
-.packages
-.pub-cache/
-.pub/
+.idea/
 build/
-**/build/
-
-# Generated files
-*.freezed.dart
-*.g.dart
-*.mocks.dart
-
-# Flutter generated plugins
+.dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 
-# ==============================
-# Android
-# ==============================
-
-**/.gradle/
-**/local.properties
-**/GeneratedPluginRegistrant.java
-**/captures/
-**/outputs/
-**/intermediates/
-*.apk
-*.aab
-
-# ==============================
-# iOS
-# ==============================
-
-**/Pods/
-**/.symlinks/
-**/Flutter/ephemeral/
-**/DerivedData/
-*.ipa
-
-# ==============================
-# IDE
-# ==============================
-
+# IDE / editor files
 .idea/
-.vscode/
 *.iml
+.vscode/
 
-# ==============================
-# Operating System
-# ==============================
-
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ==============================
-# Environment / Secrets
-# ==============================
-
-.env
-.env.*
-!.env.example
-
-# ==============================
-# Logs
-# ==============================
-
-*.log
-npm-debug.log*
+# Platform-specific generated/build directories (keep custom source/configs if needed)
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+linux/flutter/ephemeral/
+macos/Flutter/ephemeral/
+windows/flutter/ephemeral/
