@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/login_page.dart';
 import 'pages/register.dart';
 import 'pages/role_selection.dart';
 import 'pages/room_owner_register.dart';
@@ -21,8 +22,6 @@ class BandBunker extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // First screen when application starts
-      home: const RoleSelectionPage(),
     );
   }
 }

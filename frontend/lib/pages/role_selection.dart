@@ -80,25 +80,15 @@ class RoleSelectionPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
-                child: Icon(
-                  Icons.music_note,
-                  color: orange,
-                  size: 55,
+              Center(
+                child: Image.asset(
+                  'assets/images/band_bunker_logo.jpeg',
+                  width: 120,
+                  height: 150,
+                  fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  'BAND BUNKER',
-                  style: TextStyle(
-                    color: orange,
-                    fontSize: 25,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ),
+              
               const SizedBox(height: 45),
               const Text(
                 'Join Band Bunker',

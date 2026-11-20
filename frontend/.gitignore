@@ -1,1 +1,75 @@
 .idea/
+
+# ==============================
+# Flutter / Dart
+# ==============================
+
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+**/build/
+
+# Generated files
+*.freezed.dart
+*.g.dart
+*.mocks.dart
+
+# Flutter generated plugins
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# ==============================
+# Android
+# ==============================
+
+**/.gradle/
+**/local.properties
+**/GeneratedPluginRegistrant.java
+**/captures/
+**/outputs/
+**/intermediates/
+*.apk
+*.aab
+
+# ==============================
+# iOS
+# ==============================
+
+**/Pods/
+**/.symlinks/
+**/Flutter/ephemeral/
+**/DerivedData/
+*.ipa
+
+# ==============================
+# IDE
+# ==============================
+
+.idea/
+.vscode/
+*.iml
+
+# ==============================
+# Operating System
+# ==============================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==============================
+# Environment / Secrets
+# ==============================
+
+.env
+.env.*
+!.env.example
+
+# ==============================
+# Logs
+# ==============================
+
+*.log
+npm-debug.log*
