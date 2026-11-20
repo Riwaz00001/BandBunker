@@ -1,6 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/login_page.dart';
+import 'package:frontend/clients/owner_client.dart';
+import 'package:frontend/clients/musician_client.dart';
+import 'package:frontend/models/owner_models.dart';
 
 class RoomOwnerRegisterPage extends StatefulWidget {
   const RoomOwnerRegisterPage({super.key});
@@ -32,6 +35,7 @@ class _RoomOwnerRegisterPageState
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
   bool acceptedTerms = false;
+  bool isLoading = false;
 
   final List<String> roomTypes = [
     'Rehearsal Room',
@@ -218,7 +222,7 @@ class _RoomOwnerRegisterPageState
     );
   }
 
-  void createOwnerAccount() {
+  Future<void> createOwnerAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (!acceptedTerms) {
@@ -232,16 +236,57 @@ class _RoomOwnerRegisterPageState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Owner registration details completed!'),
-      ),
+    setState(() {
+      isLoading = true;
+    });
+
+    final request = OwnerRegisterRequest(
+      name: ownerNameController.text.trim(),
+      studio: studioNameController.text.trim(),
+      email: emailController.text.trim(),
+      number: phoneController.text.trim(),
+      location: locationController.text.trim(),
+      roomType: selectedRoomType,
+      password: passwordController.text,
     );
 
-    // Backend/Firebase registration will be connected later.
-    debugPrint('Owner: ${ownerNameController.text}');
-    debugPrint('Studio: ${studioNameController.text}');
-    debugPrint('Room Type: $selectedRoomType');
+    try {
+      await OwnerClient.instance.register(request);
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Owner registration successful!'),
+        ),
+      );
+
+      // Navigate to login page after successful registration
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      String errorMessage = 'Registration failed. Please try again.';
+      if (e is ApiException) {
+        errorMessage = e.message;
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -419,7 +464,7 @@ class _RoomOwnerRegisterPageState
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    onPressed: createOwnerAccount,
+                    onPressed: isLoading ? null : createOwnerAccount,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: orange,
                       foregroundColor: Colors.white,
@@ -427,14 +472,23 @@ class _RoomOwnerRegisterPageState
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'CREATE OWNER ACCOUNT',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.7,
-                      ),
-                    ),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'CREATE OWNER ACCOUNT',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.7,
+                            ),
+                          ),
                   ),
                 ),
 
