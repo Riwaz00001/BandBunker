@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/pages/login_page.dart';
 
+import '../clients/musician_client.dart';
+import '../helpers/alert_helper.dart';
+import '../models/musician_models.dart';
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -45,6 +49,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   // TERMS AND CONDITIONS
   bool agreeToTerms = false;
+
+  // REGISTRATION REQUEST IN FLIGHT
+  bool isSubmitting = false;
 
   // SELECTED MUSICAL ROLE
   // Initially no role is selected.
@@ -337,7 +344,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   // CREATE ACCOUNT FUNCTION
-  void createAccount() {
+  Future<void> createAccount() async {
 
     // VALIDATE ALL INPUT FIELDS
     if (!_formKey.currentState!.validate()) {
@@ -346,47 +353,60 @@ class _RegisterPageState extends State<RegisterPage> {
 
     // CHECK MUSICAL ROLE
     if (selectedRole.isEmpty) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select your primary role.'),
-        ),
-      );
-
+      AlertHelper.error(context, 'Please select your primary role.');
       return;
     }
 
     // CHECK TERMS AND CONDITIONS
     if (!agreeToTerms) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please agree to the Terms and Conditions.',
-          ),
-        ),
+      AlertHelper.error(
+        context,
+        'Please agree to the Terms and Conditions.',
       );
-
       return;
     }
 
-    // REGISTRATION SUCCESS MESSAGE
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: orange,
-        content: Text(
-          'Welcome to Band Bunker, ${nameController.text}!',
+    setState(() => isSubmitting = true);
+
+    try {
+
+      // CALL THE BACKEND REGISTRATION ENDPOINT
+      await MusicianClient.instance.register(
+        RegisterRequest(
+          name: nameController.text.trim(),
+          email: emailController.text.trim(),
+          password: passwordController.text,
+          role: selectedRole,
         ),
-      ),
-    );
+      );
 
-    // DISPLAY USER INFORMATION
-    debugPrint('Name: ${nameController.text}');
-    debugPrint('Email: ${emailController.text}');
-    debugPrint('Role: $selectedRole');
+      if (!mounted) return;
 
-    // Firebase or backend registration
-    // can be connected here later.
+      AlertHelper.success(
+        context,
+        'Welcome to Band Bunker, ${nameController.text.trim()}!',
+      );
+
+      await Future<void>.delayed(
+        const Duration(milliseconds: 900),
+      );
+
+      if (!mounted) return;
+
+      Navigator.maybePop(context);
+
+    } on ApiException catch (e) {
+
+      if (!mounted) return;
+
+      AlertHelper.error(context, e.message);
+
+    } finally {
+
+      if (mounted) {
+        setState(() => isSubmitting = false);
+      }
+    }
   }
 
   // MAIN INTERFACE
@@ -708,7 +728,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                     child: ElevatedButton(
 
-                      onPressed: createAccount,
+                      onPressed: isSubmitting ? null : createAccount,
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: orange,
@@ -723,28 +743,37 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
 
-                      child: const Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.center,
+                      child: isSubmitting
+                          ? const SizedBox(
+                              height: 26,
+                              width: 26,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.center,
 
-                        children: [
+                              children: [
 
-                          Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w600,
+                                Text(
+                                  'Create Account',
+                                  style: TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+
+                                SizedBox(width: 12),
+
+                                Icon(
+                                  Icons.arrow_forward,
+                                  size: 25,
+                                ),
+                              ],
                             ),
-                          ),
-
-                          SizedBox(width: 12),
-
-                          Icon(
-                            Icons.arrow_forward,
-                            size: 25,
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 

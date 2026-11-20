@@ -6,4 +6,7 @@ class Settings(BaseSettings):
     SECRET_KEY:str
     ALGORITHM:str
     EXP_TIME:int
+    supabase_url:str
+    supabase_key:str
+    bucket:str
 settings=Settings()
