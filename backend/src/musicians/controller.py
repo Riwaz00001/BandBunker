@@ -89,3 +89,13 @@ def create_post(caption:str,file:UploadFile,user:musicians=Depends(authenticated
         supabase.storage.from_(settings.bucket).remove([file_path])
         raise HTTPException(500, "Could not save post")
     return to_out(post)
+
+#Own posts
+def get_my_posts(user:musicians,db:Session):
+    rows=db.query(posts).filter(posts.musician_id==user.musician_id).order_by(posts.created_at.desc()).all()
+    return [to_out(p) for p in rows]
+
+#all posts
+def get_all_posts(db:Session):
+    rows=db.query(posts).order_by(posts.created_at.desc()).all()
+    return [to_out(p) for p in rows]

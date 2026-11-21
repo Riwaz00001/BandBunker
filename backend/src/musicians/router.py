@@ -4,7 +4,7 @@ from src.musicians.dtos import registration_info,registration_response,login_inf
 from src.musicians.models import musicians
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
-from src.musicians.controller import register_musician,login_musician,create_post
+from src.musicians.controller import register_musician,login_musician,create_post,get_my_posts,get_all_posts
 
 
 musicians_router=APIRouter(prefix="/musician")
@@ -20,3 +20,11 @@ def register(user:login_info,db:Session=Depends(get_db)):
 @musicians_router.post("/posts/create_post",response_model=post_response)
 def upload_post(caption:str=Form(""),file:UploadFile=File(...),user:musicians=Depends(authenticated_musician),db:Session=Depends(get_db)):
     return create_post(caption,file,user,db)
+
+@musicians_router.get("/posts/my_posts",response_model=list[post_response])
+def my_posts(user:musicians=Depends(authenticated_musician),db:Session=Depends(get_db)):
+    return get_my_posts(user,db)
+
+@musicians_router.get("/posts/all_posts",response_model=list[post_response])
+def all_posts(user:musicians=Depends(authenticated_musician),db:Session=Depends(get_db)):
+    return get_all_posts(db)
