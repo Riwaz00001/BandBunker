@@ -42,3 +42,29 @@ class LoginRequest {
   const LoginRequest({required this.email, required this.password});
   Map<String, dynamic> toJson() => {'email': email, 'password': password};
 }
+
+class Profile {
+  final String name;
+  final String email;
+  final String role;
+  final String? bio;
+  final String? profilePicUrl;
+
+  const Profile({
+    required this.name,
+    required this.email,
+    required this.role,
+    this.bio,
+    this.profilePicUrl,
+  });
+
+  factory Profile.fromJson(Map<String, dynamic> json) {
+    return Profile(
+      name: json['name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      role: json['role'] as String? ?? '',
+      bio: json['bio'] as String?,
+      profilePicUrl: json['profile_pic_url'] as String?,
+    );
+  }
+}

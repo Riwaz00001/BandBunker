@@ -1,5 +1,6 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../models/musician_models.dart';
 import '../services/token_storage.dart';
@@ -62,6 +63,44 @@ class MusicianClient {
     try {
       final response = await _dio.post('/musician/login', data: request.toJson());
       return (response.data as Map<String, dynamic>)['token'] as String;
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Profile> getProfile() async {
+    try {
+      final response = await _dio.get('/musician/profile');
+      return Profile.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Profile> updateProfile({required String bio, File? image}) async {
+    try {
+      final fields = <MapEntry<String, dynamic>>[
+        MapEntry('bio', bio),
+      ];
+
+      if (image != null) {
+        fields.add(
+          MapEntry(
+            'file',
+            await MultipartFile.fromFile(
+              image.path,
+              filename: image.path.split('/').last,
+            ),
+          ),
+        );
+      }
+
+      final response = await _dio.put(
+        '/musician/profile',
+        data: FormData.fromMap(Map.fromEntries(fields)),
+      );
+
+      return Profile.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapDioError(e);
     }
