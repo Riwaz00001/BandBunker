@@ -6,8 +6,12 @@ import '../clients/owner_client.dart';
 import '../models/musician_models.dart';
 import '../models/owner_models.dart';
 import '../services/token_storage.dart';
-import 'musician_dashboard.dart';
+import 'myprofile_view.dart';
 import 'owner_dashboard.dart';
+import 'home_page.dart';
+import 'discover_page.dart';
+import 'bands_page.dart';
+import 'rooms_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -69,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const musician_dashboard()),
+            MaterialPageRoute(builder: (_) => const HomePage()),
           );
         }
       }
