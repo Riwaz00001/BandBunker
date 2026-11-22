@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/home_page.dart';
 import 'package:frontend/screens/splash_screen.dart';
 import 'pages/register.dart';
 import 'pages/role_selection.dart';
