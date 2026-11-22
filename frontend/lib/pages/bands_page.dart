@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/create_band.dart';
+import 'package:frontend/pages/bands_posts.dart';
 
 class Band {
   final String name;
@@ -40,6 +42,7 @@ class _BandsPageState extends State<BandsPage> {
 
   // Empty until real band information comes from the backend.
   final List<Band> bands = [];
+  bool hasCreatedBand = false;
 
   @override
   void dispose() {
@@ -129,6 +132,61 @@ class _BandsPageState extends State<BandsPage> {
     );
   }
 
+// Add Band Posts Button
+
+// Add Band Posts Button
+  Widget buildAddPostsButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: OutlinedButton.icon(
+          onPressed: () {
+            if (!hasCreatedBand && bands.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'No band found. Please create a band first before adding posts.',
+                  ),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const BandsPostPage(),
+              ),
+            );
+          },
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+          label: const Text(
+            'Add Posts',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: orange,
+            side: const BorderSide(
+              color: orange,
+              width: 1.5,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
   // Search Bar (no category filtering)
   Widget buildSearchBar() {
     return Padding(
@@ -172,6 +230,53 @@ class _BandsPageState extends State<BandsPage> {
       ),
     );
   }
+
+
+// Create Band Button
+  Widget buildCreateBandButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton.icon(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CreateBandPage(),
+              ),
+            );
+
+            if (result == true && mounted) {
+              setState(() {
+                hasCreatedBand = true;
+              });
+            }
+          },
+          icon: const Icon(
+            Icons.add,
+            size: 23,
+          ),
+          label: const Text(
+            'Create Band',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: orange,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   // Band Image
   Widget buildBandImage(Band band) {
@@ -452,6 +557,14 @@ class _BandsPageState extends State<BandsPage> {
         const SizedBox(height: 22),
 
         buildSearchBar(),
+
+        const SizedBox(height: 15),
+
+        buildCreateBandButton(),
+
+        const SizedBox(height: 12),
+
+        buildAddPostsButton(),
 
         const SizedBox(height: 18),
 
