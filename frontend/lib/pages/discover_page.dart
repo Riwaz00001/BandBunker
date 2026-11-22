@@ -1,28 +1,9 @@
-
 import 'package:flutter/material.dart';
-import 'package:frontend/pages/artist_posts.dart';
-
-class Musician {
-  final String name;
-  final String instrument;
-  final String genre;
-  final String location;
-  final String distance;
-  final String imageUrl;
-  final List<String> skills;
-  final bool isOnline;
-
-  const Musician({
-    required this.name,
-    required this.instrument,
-    required this.genre,
-    required this.location,
-    required this.distance,
-    required this.imageUrl,
-    required this.skills,
-    this.isOnline = false,
-  });
-}
+import '../clients/musician_client.dart';
+import '../helpers/alert_helper.dart';
+import '../models/musician_models.dart';
+import '../pages/artist_posts.dart';
+import '../widgets/post_card.dart';
 
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -36,16 +17,41 @@ class _DiscoverPageState extends State<DiscoverPage> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
-  final TextEditingController searchController =
-  TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
-  // Musician data will come from the backend later.
-  final List<Musician> musicians = [];
+  final List<Post> posts = [];
+  bool _loading = true;
 
   @override
   void dispose() {
     searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPosts() async {
+    setState(() => _loading = true);
+    try {
+      final allPosts = await MusicianClient.instance.getAllPosts();
+      if (mounted) {
+        setState(() {
+          posts
+            ..clear()
+            ..addAll(allPosts);
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        AlertHelper.error(context, e.toString());
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
   }
 
   // Top Header
@@ -155,7 +161,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  // Search Bar (no category filtering)
+  // Search Bar
   Widget buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -205,13 +211,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
       child: Align(
         alignment: Alignment.centerLeft,
         child: ElevatedButton.icon(
-          onPressed: () {
-           Navigator.push(
-             context,
-             MaterialPageRoute(
-               builder: (context) => const ArtistPostsPage(),
-             ),
-           );
+          onPressed: () async {
+            final created = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ArtistPostsPage(),
+              ),
+            );
+            if (created == true && mounted) {
+              _loadPosts();
+            }
           },
           icon: const Icon(
             Icons.add,
@@ -240,210 +249,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  // Individual Musician Card
-  Widget buildMusicianCard(Musician musician) {
-    return Container(
-      margin: const EdgeInsets.only(
-        left: 22,
-        right: 22,
-        bottom: 22,
-      ),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(17),
-                    child: musician.imageUrl.isNotEmpty
-                        ? Image.network(
-                      musician.imageUrl,
-                      width: 95,
-                      height: 110,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return buildProfilePlaceholder();
-                      },
-                    )
-                        : buildProfilePlaceholder(),
-                  ),
-
-                  Positioned(
-                    bottom: -5,
-                    right: -7,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: musician.isOnline
-                            ? const Color(0xFF00C58E)
-                            : Colors.grey,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: cardColor,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(width: 16),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      musician.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      musician.instrument,
-                      style: const TextStyle(
-                        color: Color(0xFFFFA982),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      '${musician.genre} • ${musician.location}',
-                      style: const TextStyle(
-                        color: secondaryText,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 5),
-
-              Text(
-                musician.distance,
-                style: const TextStyle(
-                  color: Color(0xFFFFA982),
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 22),
-
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: musician.skills.map((skill) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF303039),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  skill,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 25),
-
-          Row(
-            children: [
-              TextButton(
-                onPressed: () {
-                  // Open musician profile later.
-                },
-                child: const Text(
-                  'View Profile  →',
-                  style: TextStyle(
-                    color: secondaryText,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-
-              ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Connect feature will be available soon.',
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.person_add_alt_1,
-                  size: 19,
-                ),
-                label: const Text('Connect'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Profile Image Placeholder
-  Widget buildProfilePlaceholder() {
-    return Container(
-      width: 95,
-      height: 110,
-      color: const Color(0xFF303039),
-      child: const Icon(
-        Icons.person,
-        color: secondaryText,
-        size: 45,
-      ),
-    );
-  }
-
   // Empty State
   Widget buildEmptyState() {
     return const Center(
@@ -461,7 +266,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
             SizedBox(height: 15),
 
             Text(
-              'No musicians to discover yet',
+              'No posts to discover yet',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
@@ -473,7 +278,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
             SizedBox(height: 8),
 
             Text(
-              'Musician profiles will appear here when users join Band Bunker.',
+              'Musician posts will appear here when users share content.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: secondaryText,
@@ -507,16 +312,21 @@ class _DiscoverPageState extends State<DiscoverPage> {
         const SizedBox(height: 18),
 
         Expanded(
-          child: musicians.isEmpty
-              ? buildEmptyState()
-              : ListView.builder(
-            itemCount: musicians.length,
-            itemBuilder: (context, index) {
-              return buildMusicianCard(
-                musicians[index],
-              );
-            },
-          ),
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(color: orange),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadPosts,
+                  child: posts.isEmpty
+                      ? buildEmptyState()
+                      : ListView.builder(
+                          itemCount: posts.length,
+                          itemBuilder: (context, index) {
+                            return PostCard(post: posts[index]);
+                          },
+                        ),
+                ),
         ),
       ],
     );

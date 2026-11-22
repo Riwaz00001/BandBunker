@@ -106,6 +106,43 @@ class MusicianClient {
     }
   }
 
+  Future<Post> createPost({required String caption, required File file}) async {
+    try {
+      final fileName = file.path.split('/').last;
+      final formData = FormData.fromMap({
+        'caption': caption,
+        'file': await MultipartFile.fromFile(file.path, filename: fileName),
+      });
+      final response = await _dio.post(
+        '/musician/posts/create_post',
+        data: formData,
+      );
+      return Post.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<Post>> getMyPosts() async {
+    try {
+      final response = await _dio.get('/musician/posts/my_posts');
+      final list = response.data as List;
+      return list.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<Post>> getAllPosts() async {
+    try {
+      final response = await _dio.get('/musician/posts/all_posts');
+      final list = response.data as List;
+      return list.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   ApiException _mapDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
