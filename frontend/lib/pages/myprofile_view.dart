@@ -1,5 +1,10 @@
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../clients/musician_client.dart';
+import '../helpers/alert_helper.dart';
+import '../models/musician_models.dart';
 import '../services/token_storage.dart';
 import 'login_page.dart';
 
@@ -24,34 +29,52 @@ class _MyProfileViewState extends State<MyProfileView> {
   static const Color fieldColor = Color(0xFF101017);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
-  String artistName = 'Pratik Pariyar';
-  String artistEmail = 'pariyarpratik450@gmail.com';
+  Profile? _profile;
+  bool _loading = true;
 
-  String biography =
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await MusicianClient.instance.getProfile();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        AlertHelper.error(context, e.toString());
+      }
+    }
+  }
+
+  String get _artistName => _profile?.name ?? 'Pratik Pariyar';
+  String get _artistEmail => _profile?.email ?? 'pariyarpratik450@gmail.com';
+  String get _biography => _profile?.bio ??
       'Write something about yourself, your musical journey and experience...';
+  String? get _profilePicUrl => _profile?.profilePicUrl;
 
   Future<void> openEditProfile() async {
-    final result = await Navigator.push<ProfileData>(
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => EditProfilePage(
-          biography: biography,
+          biography: _biography,
         ),
       ),
     );
 
-    if (result != null) {
-      setState(() {
-        biography = result.biography;
-      });
-
+    if (result == true && mounted) {
+      await _loadProfile();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: orange,
-          ),
-        );
+        AlertHelper.success(context, 'Profile updated successfully!');
       }
     }
   }
@@ -112,6 +135,42 @@ class _MyProfileViewState extends State<MyProfileView> {
     );
   }
 
+  Widget _buildAvatar() {
+    if (_profilePicUrl != null && _profilePicUrl!.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          _profilePicUrl!,
+          width: 96,
+          height: 96,
+          fit: BoxFit.cover,
+          key: ValueKey(_profilePicUrl),
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Icon(
+              Icons.broken_image,
+              color: secondaryText,
+              size: 48,
+            ),
+          ),
+        ),
+      );
+    }
+    return const CircleAvatar(
+      radius: 48,
+      backgroundColor: fieldColor,
+      child: Icon(
+        Icons.person,
+        size: 55,
+        color: secondaryText,
+      ),
+    );
+  }
+
   Widget buildProfileCard() {
     return Container(
       width: double.infinity,
@@ -140,18 +199,11 @@ class _MyProfileViewState extends State<MyProfileView> {
               ),
             ),
           ),
-          const CircleAvatar(
-            radius: 48,
-            backgroundColor: fieldColor,
-            child: Icon(
-              Icons.person,
-              size: 55,
-              color: secondaryText,
-            ),
-          ),
+          const SizedBox(height: 15),
+          _buildAvatar(),
           const SizedBox(height: 15),
           Text(
-            artistName,
+            _artistName,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 21,
@@ -160,7 +212,7 @@ class _MyProfileViewState extends State<MyProfileView> {
           ),
           const SizedBox(height: 5),
           Text(
-            artistEmail,
+            _artistEmail,
             style: const TextStyle(
               color: secondaryText,
               fontSize: 13,
@@ -225,9 +277,9 @@ class _MyProfileViewState extends State<MyProfileView> {
             ),
           ),
           const SizedBox(height: 20),
-          buildInformationField('Full Name', artistName),
+          buildInformationField('Full Name', _artistName),
           const SizedBox(height: 18),
-          buildInformationField('Email Address', artistEmail),
+          buildInformationField('Email Address', _artistEmail),
         ],
       ),
     );
@@ -254,7 +306,7 @@ class _MyProfileViewState extends State<MyProfileView> {
           ),
           const SizedBox(height: 12),
           Text(
-            biography,
+            _biography,
             style: const TextStyle(
               color: secondaryText,
               fontSize: 14,
@@ -266,8 +318,21 @@ class _MyProfileViewState extends State<MyProfileView> {
     );
   }
 
+  Widget buildLoading() {
+    return const Center(
+      child: CircularProgressIndicator(color: orange),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: buildLoading(),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -351,11 +416,12 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   static const Color orange = Color(0xFFFF7A00);
-  static const Color cardColor = Color(0xFF202026);
   static const Color fieldColor = Color(0xFF101017);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
   late TextEditingController biographyController;
+  File? _selectedImage;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -372,12 +438,64 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  void saveChanges() {
-    Navigator.pop(
-      context,
-      ProfileData(
-        biography: biographyController.text.trim(),
-      ),
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedImage = File(picked.path);
+      });
+    }
+  }
+
+  Future<void> saveChanges() async {
+    final bio = biographyController.text.trim();
+    if (bio.isEmpty) {
+      AlertHelper.error(context, 'Biography cannot be empty.');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      await MusicianClient.instance.updateProfile(
+        bio: bio,
+        image: _selectedImage,
+      );
+      if (mounted) {
+        AlertHelper.success(context, 'Profile updated successfully!');
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        AlertHelper.error(context, e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Widget _buildImagePreview() {
+    if (_selectedImage == null) return const SizedBox.shrink();
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            _selectedImage!,
+            height: 120,
+            width: 120,
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
     );
   }
 
@@ -412,11 +530,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
             const SizedBox(height: 15),
 
+            _buildImagePreview(),
+
             Center(
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // Backend photo selection/upload functionality will be added later.
-                },
+                onPressed: _isSaving ? null : _pickImage,
                 icon: const Icon(
                   Icons.add_a_photo_outlined,
                   color: orange,
@@ -471,6 +589,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               controller: biographyController,
               maxLines: 6,
               maxLength: 300,
+              enabled: !_isSaving,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -510,7 +629,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: saveChanges,
+                onPressed: _isSaving ? null : saveChanges,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: orange,
                   foregroundColor: Colors.white,
@@ -518,13 +637,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Save Changes',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Save Changes',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
