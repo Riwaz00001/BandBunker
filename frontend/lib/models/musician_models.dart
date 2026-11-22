@@ -68,3 +68,44 @@ class Profile {
     );
   }
 }
+
+class Post {
+  final int musicianId;
+  final String musicianName;
+  final String? profilePicUrl;
+  final String caption;
+  final String mediaType;
+  final String mediaUrl;
+  final DateTime createdAt;
+
+  Post({
+    required this.musicianId,
+    required this.musicianName,
+    this.profilePicUrl,
+    required this.caption,
+    required this.mediaType,
+    required this.mediaUrl,
+    required this.createdAt,
+  });
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    final created = json['created_at'] as String?;
+    return Post(
+      musicianId: json['musician_id'] as int? ?? 0,
+      musicianName: json['musician_name'] as String? ?? '',
+      profilePicUrl: json['profile_pic_url'] as String?,
+      caption: json['caption'] as String? ?? '',
+      mediaType: json['media_type'] as String? ?? '',
+      mediaUrl: json['media_url'] as String? ?? '',
+      createdAt: created != null ? DateTime.parse(created) : DateTime.now(),
+    );
+  }
+
+  String get formattedDate {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${createdAt.day} ${months[createdAt.month - 1]}';
+  }
+}

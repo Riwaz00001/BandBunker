@@ -6,6 +6,7 @@ import '../clients/musician_client.dart';
 import '../helpers/alert_helper.dart';
 import '../models/musician_models.dart';
 import '../services/token_storage.dart';
+import '../widgets/post_card.dart';
 import 'login_page.dart';
 
 class ProfileData {
@@ -32,10 +33,14 @@ class _MyProfileViewState extends State<MyProfileView> {
   Profile? _profile;
   bool _loading = true;
 
+  final List<Post> _myPosts = [];
+  bool _postsLoading = true;
+
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadMyPosts();
   }
 
   Future<void> _loadProfile() async {
@@ -50,6 +55,26 @@ class _MyProfileViewState extends State<MyProfileView> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
+        AlertHelper.error(context, e.toString());
+      }
+    }
+  }
+
+  Future<void> _loadMyPosts() async {
+    setState(() => _postsLoading = true);
+    try {
+      final myPosts = await MusicianClient.instance.getMyPosts();
+      if (mounted) {
+        setState(() {
+          _myPosts
+            ..clear()
+            ..addAll(myPosts);
+          _postsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _postsLoading = false);
         AlertHelper.error(context, e.toString());
       }
     }
@@ -73,6 +98,7 @@ class _MyProfileViewState extends State<MyProfileView> {
 
     if (result == true && mounted) {
       await _loadProfile();
+      await _loadMyPosts();
       if (mounted) {
         AlertHelper.success(context, 'Profile updated successfully!');
       }
@@ -381,6 +407,65 @@ class _MyProfileViewState extends State<MyProfileView> {
     );
   }
 
+  Widget buildMyPostsCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Posts',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_postsLoading)
+            const Center(
+              child: CircularProgressIndicator(color: orange),
+            )
+          else if (_myPosts.isEmpty)
+            const Center(
+              child: Text(
+                'No posts yet. Create one from Discover.',
+                style: TextStyle(
+                  color: secondaryText,
+                  fontSize: 14,
+                ),
+              ),
+            )
+          else
+            Column(
+              children: _myPosts.asMap().entries.map((entry) {
+                final index = entry.key;
+                final post = entry.value;
+                return Column(
+                  children: [
+                    PostCard(post: post),
+                    if (index < _myPosts.length - 1)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 22),
+                        child: Divider(
+                          color: Color(0xFF303039),
+                          height: 1,
+                        ),
+                      ),
+                  ],
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget buildLoading() {
     return const Center(
       child: CircularProgressIndicator(color: orange),
@@ -453,6 +538,10 @@ class _MyProfileViewState extends State<MyProfileView> {
               const SizedBox(height: 20),
 
               buildBiographyCard(),
+
+              const SizedBox(height: 20),
+
+              buildMyPostsCard(),
 
               const SizedBox(height: 30),
             ],
