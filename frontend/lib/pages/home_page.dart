@@ -145,7 +145,7 @@ class _HomePageState extends State<HomePage> {
             controller: searchController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Search musicians, bands, rooms...',
+              hintText: 'Search musicians',
               hintStyle: const TextStyle(
                 color: secondaryText,
                 fontSize: 14,

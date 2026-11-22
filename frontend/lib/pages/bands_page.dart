@@ -140,7 +140,7 @@ class _BandsPageState extends State<BandsPage> {
           fontSize: 15,
         ),
         decoration: InputDecoration(
-          hintText: 'Search bands, genres, locations...',
+          hintText: 'Search Bands and Location',
           hintStyle: const TextStyle(
             color: secondaryText,
             fontSize: 14,
