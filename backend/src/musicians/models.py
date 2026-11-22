@@ -18,3 +18,9 @@ class posts(Base):
     file_path = Column(String, nullable=False)
     media_type = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+class profile_info(Base):
+    __tablename__="profile_info"
+    musician_id=Column(Integer,ForeignKey("musicians.musician_id",ondelete="CASCADE"),primary_key=True)
+    bio=Column(String,nullable=True)
+    profile_pic_path=Column(String,nullable=True)
