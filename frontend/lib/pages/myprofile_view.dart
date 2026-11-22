@@ -58,7 +58,7 @@ class _MyProfileViewState extends State<MyProfileView> {
   String get _artistName => _profile?.name ?? 'Pratik Pariyar';
   String get _artistEmail => _profile?.email ?? 'pariyarpratik450@gmail.com';
   String get _biography => _profile?.bio ??
-      'Write something about yourself, your musical journey and experience...';
+      'Artist...';
   String? get _profilePicUrl => _profile?.profilePicUrl;
 
   Future<void> openEditProfile() async {
@@ -79,11 +79,73 @@ class _MyProfileViewState extends State<MyProfileView> {
     }
   }
 
+
   Future<void> logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            'Confirm Logout',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              color: secondaryText,
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            // No button
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text(
+                'No',
+                style: TextStyle(
+                  color: secondaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+
+            // Yes button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // If user selects No or closes the dialog
+    if (shouldLogout != true) return;
+
+    // Clear login token
     await TokenStorage.clearMusicianToken();
 
     if (!mounted) return;
 
+    // Navigate to Login page
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
@@ -92,6 +154,7 @@ class _MyProfileViewState extends State<MyProfileView> {
           (route) => false,
     );
   }
+
 
   Widget buildProfileHeading() {
     return Row(

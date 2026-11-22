@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/artist_posts.dart';
 
 class Musician {
   final String name;
@@ -165,7 +166,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
           fontSize: 15,
         ),
         decoration: InputDecoration(
-          hintText: 'Search by name, instrument, or skill...',
+          hintText: 'Search by Name and Roles.',
           hintStyle: const TextStyle(
             color: secondaryText,
             fontSize: 14,
@@ -192,6 +193,47 @@ class _DiscoverPageState extends State<DiscoverPage> {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+  // Add Post Button
+  Widget buildAddPostButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: ElevatedButton.icon(
+          onPressed: () {
+           Navigator.push(
+             context,
+             MaterialPageRoute(
+               builder: (context) => const ArtistPostsPage(),
+             ),
+           );
+          },
+          icon: const Icon(
+            Icons.add,
+            size: 21,
+          ),
+          label: const Text(
+            'Add Post',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: orange,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 12,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ),
@@ -457,6 +499,10 @@ class _DiscoverPageState extends State<DiscoverPage> {
         const SizedBox(height: 22),
 
         buildSearchBar(),
+
+        const SizedBox(height: 12),
+
+        buildAddPostButton(),
 
         const SizedBox(height: 18),
 

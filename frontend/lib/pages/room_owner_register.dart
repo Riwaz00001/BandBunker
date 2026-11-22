@@ -492,6 +492,7 @@ class _RoomOwnerRegisterPageState
                   ),
                 ),
 
+
                 const SizedBox(height: 25),
 
                 Center(
@@ -504,6 +505,7 @@ class _RoomOwnerRegisterPageState
                         ),
                       );
                     },
+
                     child: const Text.rich(
                       TextSpan(
                         text: 'Already have an account? ',

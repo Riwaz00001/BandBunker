@@ -144,7 +144,7 @@ class _RoomsPageState extends State<RoomsPage> {
           fontSize: 15,
         ),
         decoration: InputDecoration(
-          hintText: 'Search rooms, studios, locations...',
+          hintText: 'Search by Studio and Location',
           hintStyle: const TextStyle(
             color: secondaryText,
             fontSize: 14,
