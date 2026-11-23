@@ -82,7 +82,7 @@ def update_band(band_id: int,band_name: str | None,description: str | None,genre
     if new_path:
         band.profile_pic_path = new_path
     if band_name is not None:
-        band.name = band_name.strip()
+        band.band_name = band_name.strip()
     if description is not None:
         band.description = description
     if genre is not None:

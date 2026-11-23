@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/create_band.dart';
+import 'package:frontend/pages/edit_band.dart';
 import 'package:frontend/pages/bands_posts.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/clients/bands_client.dart';
@@ -348,6 +349,14 @@ class _MyBandPageState extends State<MyBandPage> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
+  late Band _band;
+
+  @override
+  void initState() {
+    super.initState();
+    _band = widget.band;
+  }
+
   void addPosts() {
     Navigator.push(
       context,
@@ -355,6 +364,28 @@ class _MyBandPageState extends State<MyBandPage> {
         builder: (context) => const BandsPostPage(),
       ),
     );
+  }
+
+  Future<void> editBand() async {
+    final updated = await Navigator.push<Band>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditBandPage(band: _band),
+      ),
+    );
+
+    if (updated != null && mounted) {
+      setState(() {
+        _band = updated;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Band updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Widget buildInfoCard() {
@@ -381,9 +412,9 @@ class _MyBandPageState extends State<MyBandPage> {
                   width: 1.5,
                 ),
               ),
-              child: widget.band.profilePicUrl != null
+              child: _band.profilePicUrl != null
                   ? Image.network(
-                widget.band.profilePicUrl!,
+                _band.profilePicUrl!,
                 width: 110,
                 height: 110,
                 fit: BoxFit.cover,
@@ -406,7 +437,7 @@ class _MyBandPageState extends State<MyBandPage> {
 
           Center(
             child: Text(
-              widget.band.bandName,
+              _band.bandName,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
@@ -429,7 +460,7 @@ class _MyBandPageState extends State<MyBandPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                widget.band.genre,
+                _band.genre,
                 style: const TextStyle(
                   color: orange,
                   fontSize: 14,
@@ -453,7 +484,7 @@ class _MyBandPageState extends State<MyBandPage> {
           const SizedBox(height: 10),
 
           Text(
-            widget.band.description ?? '',
+            _band.description ?? '',
             style: const TextStyle(
               color: secondaryText,
               fontSize: 15,
@@ -653,6 +684,15 @@ class _MyBandPageState extends State<MyBandPage> {
               title: 'Add Posts',
               icon: Icons.add_photo_alternate_outlined,
               onPressed: addPosts,
+            ),
+
+            const SizedBox(height: 15),
+
+            buildActionButton(
+              title: 'Edit Band Profile',
+              icon: Icons.edit_outlined,
+              onPressed: editBand,
+              outlined: true,
             ),
           ],
         ),

@@ -76,6 +76,46 @@ class BandsClient {
     }
   }
 
+  Future<Band> updateBand({
+    required int bandId,
+    required String bandName,
+    String? description,
+    required String genre,
+    File? image,
+  }) async {
+    try {
+      final fields = <MapEntry<String, dynamic>>[
+        MapEntry('band_name', bandName),
+        MapEntry('genre', genre),
+      ];
+
+      if (description != null && description.isNotEmpty) {
+        fields.add(MapEntry('description', description));
+      }
+
+      if (image != null) {
+        fields.add(
+          MapEntry(
+            'file',
+            await MultipartFile.fromFile(
+              image.path,
+              filename: image.path.split('/').last,
+            ),
+          ),
+        );
+      }
+
+      final response = await _dio.put(
+        '/bands/$bandId',
+        data: FormData.fromMap(Map.fromEntries(fields)),
+      );
+
+      return Band.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   Future<Band?> getMyBand() async {
     try {
       final response = await _dio.get('/bands/my_band');
