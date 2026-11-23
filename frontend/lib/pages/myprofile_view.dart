@@ -451,7 +451,7 @@ class _MyProfileViewState extends State<MyProfileView> {
                     PostCard(post: post),
                     if (index < _myPosts.length - 1)
                       const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 22),
+                        padding: EdgeInsets.symmetric(horizontal: 30),
                         child: Divider(
                           color: Color(0xFF303039),
                           height: 1,

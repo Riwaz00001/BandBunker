@@ -21,9 +21,29 @@ class _HomePageState extends State<HomePage> {
 
   late final List<Widget> _pages = [
     buildHomeContent(),
-    const DiscoverPage(),
-    const BandsPage(),
-    const RoomsPage(),
+
+    DiscoverPage(
+      onProfileTap: () {
+        setState(() {
+          selectedIndex = 4;
+        });
+      },
+    ),
+
+    BandsPage(
+      onProfileTap: (){
+        setState(() {
+          selectedIndex = 4;
+        });
+      },
+    ),
+    RoomsPage(
+      onProfileTap: (){
+        setState(() {
+          selectedIndex = 4;
+        });
+      },
+    ),
     const MyProfileView(),
   ];
 

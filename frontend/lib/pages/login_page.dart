@@ -35,6 +35,9 @@ class _LoginPageState extends State<LoginPage> {
   bool isPasswordVisible = false;
   bool isOwner = false;
 
+  // Loading state
+  bool isLoading = false;
+
   // Navigate to role selection
   void openRegistration() {
     Navigator.push(
@@ -45,8 +48,17 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  // Login function
   void login() async {
+    if (isLoading) return;
+
     if (!_formKey.currentState!.validate()) return;
+
+    // Start loading interface
+    setState(() {
+      isLoading = true;
+    });
+
     try {
       if (isOwner) {
         final token = await OwnerClient.instance.login(
@@ -55,11 +67,15 @@ class _LoginPageState extends State<LoginPage> {
             password: passwordController.text,
           ),
         );
+
         await TokenStorage.saveOwnerToken(token);
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const owner_dashboard()),
+            MaterialPageRoute(
+              builder: (_) => const owner_dashboard(),
+            ),
           );
         }
       } else {
@@ -69,23 +85,37 @@ class _LoginPageState extends State<LoginPage> {
             password: passwordController.text,
           ),
         );
+
         await TokenStorage.saveMusicianToken(token);
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomePage()),
+            MaterialPageRoute(
+              builder: (_) => const HomePage(),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
+      }
+    } finally {
+      // Stop loading if login fails or this page is still mounted
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
       }
     }
   }
-
 
   Widget buildInputField({
     required String label,
@@ -200,7 +230,16 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget buildMusicBars() {
-    final heights = [22.0, 32.0, 43.0, 27.0, 15.0, 33.0, 42.0, 24.0];
+    final heights = [
+      22.0,
+      32.0,
+      43.0,
+      27.0,
+      15.0,
+      33.0,
+      42.0,
+      24.0
+    ];
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -213,13 +252,71 @@ class _LoginPageState extends State<LoginPage> {
           decoration: BoxDecoration(
             color: index < 4
                 ? orange
-                : (index == 4
-                ? secondaryText
-                : Colors.white24),
+                : (index == 4 ? secondaryText : Colors.white24),
             borderRadius: BorderRadius.circular(10),
           ),
         );
       }),
+    );
+  }
+
+  // Loading overlay
+  Widget buildLoadingOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.75),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 35,
+              vertical: 35,
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 35),
+            decoration: BoxDecoration(
+              color: fieldColor,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: orange.withOpacity(0.5),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 55,
+                  height: 55,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 4,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.deepOrange,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 25),
+                const Text(
+                  'Connecting to Band Bunker...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Please wait while we verify your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: secondaryText,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -234,188 +331,200 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 28,
-                vertical: 18,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 36,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Image.asset(
-                          'assets/images/band_bunker_logo.jpeg',
-                          width: 220,
-                          height: 105,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      Center(
-                        child: Image.asset(
-                          'assets/images/band_bunker_written.jpeg',
-                          width: 200,
-                          height: 85,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-
-                      const SizedBox(height: 0),
-
-                      // Heading
-                      const Text(
-                        'Welcome Back',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -1,
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      const Text(
-                        'Sign in to connect with the local musicians.',
-                        style: TextStyle(
-                          color: secondaryText,
-                          fontSize: 16,
-                        ),
-                      ),
-
-                      const SizedBox(height: 22),
-
-                      buildMusicBars(),
-
-                      const SizedBox(height: 45),
-
-                      // Email
-                      buildInputField(
-                        label: 'Email Address',
-                        hint: 'user@gmail.com',
-                        icon: Icons.email_outlined,
-                        controller: emailController,
-                      ),
-
-                      const SizedBox(height: 25),
-
-
-                      const SizedBox(height: 8),
-
-                      buildInputField(
-                        label: 'Password',
-                        hint: 'Enter your password',
-                        icon: Icons.lock_outline,
-                        controller: passwordController,
-                        isPassword: true,
-                      ),
-
-                      const SizedBox(height: 35),
-
-                      // Role toggle
-                      Row(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 18,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 36,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ChoiceChip(
-                            label: const Text('Musician'),
-                            selected: !isOwner,
-                            onSelected: (_) => setState(() => isOwner = false),
-                          ),
-                          const SizedBox(width: 10),
-                          ChoiceChip(
-                            label: const Text('Owner'),
-                            selected: isOwner,
-                            onSelected: (_) => setState(() => isOwner = true),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      // Login button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 65,
-                        child: ElevatedButton(
-                          onPressed: login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: orange,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                          Center(
+                            child: Image.asset(
+                              'assets/images/band_bunker_logo.jpeg',
+                              width: 220,
+                              height: 105,
+                              fit: BoxFit.contain,
                             ),
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Center(
+                            child: Image.asset(
+                              'assets/images/band_bunker_written.jpeg',
+                              width: 200,
+                              height: 85,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+
+                          const SizedBox(height: 0),
+
+                          // Heading
+                          const Text(
+                            'Welcome Back',
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -1,
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          const Text(
+                            'Sign in to connect with the local musicians.',
+                            style: TextStyle(
+                              color: secondaryText,
+                              fontSize: 16,
+                            ),
+                          ),
+
+                          const SizedBox(height: 22),
+
+                          buildMusicBars(),
+
+                          const SizedBox(height: 45),
+
+                          // Email
+                          buildInputField(
+                            label: 'Email Address',
+                            hint: 'user@gmail.com',
+                            icon: Icons.email_outlined,
+                            controller: emailController,
+                          ),
+
+                          const SizedBox(height: 25),
+
+                          const SizedBox(height: 8),
+
+                          // Password
+                          buildInputField(
+                            label: 'Password',
+                            hint: 'Enter your password',
+                            icon: Icons.lock_outline,
+                            controller: passwordController,
+                            isPassword: true,
+                          ),
+
+                          const SizedBox(height: 35),
+
+                          // Role toggle
+                          Row(
                             children: [
-                              Text(
-                                'Log In',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              ChoiceChip(
+                                label: const Text('Musician'),
+                                selected: !isOwner,
+                                onSelected: (_) {
+                                  setState(() => isOwner = false);
+                                },
                               ),
-                              SizedBox(width: 12),
-                              Icon(
-                                Icons.bolt,
-                                size: 25,
+                              const SizedBox(width: 10),
+                              ChoiceChip(
+                                label: const Text('Owner'),
+                                selected: isOwner,
+                                onSelected: (_) {
+                                  setState(() => isOwner = true);
+                                },
                               ),
                             ],
                           ),
-                        ),
-                      ),
 
-                      const SizedBox(height: 25),
+                          const SizedBox(height: 25),
 
-                      // Bottom registration link
-                      Center(
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Text(
-                              "Don't have an account? ",
-                              style: TextStyle(
-                                color: secondaryText,
-                                fontSize: 15,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: openRegistration,
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
+                          // Login button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 65,
+                            child: ElevatedButton(
+                              onPressed: isLoading ? null : login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: orange,
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: orange.withOpacity(0.6),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
                                 ),
                               ),
-                              child: const Text(
-                                'Create an Account',
-                                style: TextStyle(
-                                  color: orange,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Log In',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Icon(
+                                    Icons.bolt,
+                                    size: 25,
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
 
-                      const SizedBox(height: 15),
-                    ],
+                          const SizedBox(height: 25),
+
+                          // Bottom registration link
+                          Center(
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                const Text(
+                                  "Don't have an account? ",
+                                  style: TextStyle(
+                                    color: secondaryText,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: openRegistration,
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Create an Account',
+                                    style: TextStyle(
+                                      color: orange,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 15),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+
+          // Display loading overlay while backend request is processing
+          if (isLoading) buildLoadingOverlay(),
+        ],
       ),
     );
   }

@@ -4,8 +4,12 @@ import 'package:frontend/pages/create_band.dart';
 import 'package:frontend/pages/bands_posts.dart';
 
 class BandsPage extends StatefulWidget {
-  const BandsPage({super.key});
+  final VoidCallback onProfileTap;
 
+  const BandsPage({
+    super.key,
+    required this.onProfileTap,
+  });
   @override
   State<BandsPage> createState() => _BandsPageState();
 }
@@ -68,20 +72,23 @@ class _BandsPageState extends State<BandsPage> {
               ],
             ),
           ),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: orange,
-                width: 2,
+          GestureDetector(
+            onTap: widget.onProfileTap,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: orange,
+                  width: 2,
+                ),
               ),
-            ),
-            child: const Icon(
-              Icons.groups_outlined,
-              color: Colors.white,
-              size: 28,
+              child: const Icon(
+                Icons.person_outlined,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
           ),
         ],
