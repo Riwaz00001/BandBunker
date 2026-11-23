@@ -19,6 +19,14 @@ class _HomePageState extends State<HomePage> {
 
   int selectedIndex = 0;
 
+  late final List<Widget> _pages = [
+    buildHomeContent(),
+    const DiscoverPage(),
+    const BandsPage(),
+    const RoomsPage(),
+    const MyProfileView(),
+  ];
+
   final TextEditingController searchController =
   TextEditingController();
 
@@ -88,20 +96,27 @@ class _HomePageState extends State<HomePage> {
               ),
 
               // Profile Icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: orange,
-                    width: 2,
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedIndex = 4;
+                  });
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: orange,
+                      width: 2,
+                    ),
                   ),
-                ),
-                child: const Icon(
-                  Icons.person_outline,
-                  color: Colors.white,
-                  size: 28,
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
               ),
             ],
@@ -261,17 +276,10 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: background,
 
       body: SafeArea(
-        child: selectedIndex == 0
-            ? buildHomeContent():
-            selectedIndex == 1 ? const DiscoverPage()
-                : selectedIndex == 2
-                ? const BandsPage()
-                : selectedIndex == 3
-                ? const RoomsPage()
-                : selectedIndex == 4
-                ? const MyProfileView()
-
-            : buildOtherPage(pageTitles[selectedIndex]),
+        child: IndexedStack(
+          index: selectedIndex,
+          children: _pages,
+        ),
       ),
 
       // Bottom Navigation Bar
