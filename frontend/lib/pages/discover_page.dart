@@ -6,7 +6,12 @@ import '../pages/artist_posts.dart';
 import '../widgets/post_card.dart';
 
 class DiscoverPage extends StatefulWidget {
-  const DiscoverPage({super.key});
+  final VoidCallback onProfileTap;
+
+  const DiscoverPage({
+    super.key,
+    required this.onProfileTap,
+  });
 
   @override
   State<DiscoverPage> createState() => _DiscoverPageState();
@@ -112,35 +117,38 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
           ),
 
-           Container(
-             width: 48,
-             height: 48,
-             decoration: BoxDecoration(
-               shape: BoxShape.circle,
-               border: Border.all(
-                 color: orange,
-                 width: 2,
+           GestureDetector(
+             onTap: widget.onProfileTap,
+             child: Container(
+               width: 48,
+               height: 48,
+               decoration: BoxDecoration(
+                 shape: BoxShape.circle,
+                 border: Border.all(
+                   color: orange,
+                   width: 2,
+                 ),
                ),
-             ),
-             child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
-                 ? ClipOval(
-                     child: Image.network(
-                       _profile!.profilePicUrl!,
-                       width: 44,
-                       height: 44,
-                       fit: BoxFit.cover,
-                       errorBuilder: (_, __, ___) => const Icon(
-                         Icons.person_outline,
-                         color: Colors.white,
-                         size: 28,
+               child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
+                   ? ClipOval(
+                       child: Image.network(
+                         _profile!.profilePicUrl!,
+                         width: 44,
+                         height: 44,
+                         fit: BoxFit.cover,
+                         errorBuilder: (_, __, ___) => const Icon(
+                           Icons.person_outline,
+                           color: Colors.white,
+                           size: 28,
+                         ),
                        ),
+                     )
+                   : const Icon(
+                       Icons.person_outline,
+                       color: Colors.white,
+                       size: 28,
                      ),
-                   )
-                 : const Icon(
-                     Icons.person_outline,
-                     color: Colors.white,
-                     size: 28,
-                   ),
+             ),
            ),
         ],
       ),
