@@ -190,4 +190,3 @@ def update_profile(bio: str | None, file: UploadFile | None, user: musicians, db
     return profile_out(user, p)
 
 
-#bands logic
