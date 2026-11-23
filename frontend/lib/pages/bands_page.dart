@@ -236,7 +236,7 @@ class _BandsPageState extends State<BandsPage> {
                 );
               }
             } else {
-              Navigator.push(
+              final result = await Navigator.push<Band>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => MyBandPage(
@@ -244,6 +244,12 @@ class _BandsPageState extends State<BandsPage> {
                   ),
                 ),
               );
+
+              if (result != null && mounted) {
+                setState(() {
+                  myBand = result;
+                });
+              }
             }
           },
           icon: Icon(
@@ -649,52 +655,58 @@ class _MyBandPageState extends State<MyBandPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, _band);
+        return false;
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFF121212),
-        elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
-        title: const Text(
-          'My Band',
-          style: TextStyle(
+
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF121212),
+          elevation: 0,
+          iconTheme: const IconThemeData(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
+          ),
+          title: const Text(
+            'My Band',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(22, 15, 22, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            buildInfoCard(),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 15, 22, 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildInfoCard(),
 
-            const SizedBox(height: 22),
+              const SizedBox(height: 22),
 
-            buildMembersCard(),
+              buildMembersCard(),
 
-            const SizedBox(height: 25),
+              const SizedBox(height: 25),
 
-            buildActionButton(
-              title: 'Add Posts',
-              icon: Icons.add_photo_alternate_outlined,
-              onPressed: addPosts,
-            ),
+              buildActionButton(
+                title: 'Add Posts',
+                icon: Icons.add_photo_alternate_outlined,
+                onPressed: addPosts,
+              ),
 
-            const SizedBox(height: 15),
+              const SizedBox(height: 15),
 
-            buildActionButton(
-              title: 'Edit Band Profile',
-              icon: Icons.edit_outlined,
-              onPressed: editBand,
-              outlined: true,
-            ),
-          ],
+              buildActionButton(
+                title: 'Edit Band Profile',
+                icon: Icons.edit_outlined,
+                onPressed: editBand,
+                outlined: true,
+              ),
+            ],
+          ),
         ),
       ),
     );
