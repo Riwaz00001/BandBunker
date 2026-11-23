@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import '../clients/musician_client.dart';
+import '../models/musician_models.dart';
 
 class JammingRoom {
   final String name;
@@ -44,6 +46,23 @@ class _RoomsPageState extends State<RoomsPage> {
 
   // Empty until real room information comes from the backend.
   final List<JammingRoom> rooms = [];
+  Profile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await MusicianClient.instance.getProfile();
+      if (profile.profilePicUrl != null && profile.profilePicUrl!.isNotEmpty && mounted) {
+        await precacheImage(NetworkImage(profile.profilePicUrl!), context);
+      }
+      if (mounted) setState(() => _profile = profile);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -97,22 +116,36 @@ class _RoomsPageState extends State<RoomsPage> {
             ),
           ),
 
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: orange,
-                width: 2,
-              ),
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
+           Container(
+             width: 48,
+             height: 48,
+             decoration: BoxDecoration(
+               shape: BoxShape.circle,
+               border: Border.all(
+                 color: orange,
+                 width: 2,
+               ),
+             ),
+             child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
+                 ? ClipOval(
+                     child: Image.network(
+                       _profile!.profilePicUrl!,
+                       width: 44,
+                       height: 44,
+                       fit: BoxFit.cover,
+                       errorBuilder: (_, __, ___) => const Icon(
+                         Icons.person_outline,
+                         color: Colors.white,
+                         size: 28,
+                       ),
+                     ),
+                   )
+                 : const Icon(
+                     Icons.person_outline,
+                     color: Colors.white,
+                     size: 28,
+                   ),
+           ),
         ],
       ),
     );
@@ -526,3 +559,4 @@ class _RoomsPageState extends State<RoomsPage> {
     );
   }
 }
+
