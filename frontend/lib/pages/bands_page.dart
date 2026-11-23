@@ -1,7 +1,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/create_band.dart';
+import 'package:frontend/pages/edit_band.dart';
 import 'package:frontend/pages/bands_posts.dart';
+import 'package:frontend/models/band_models.dart';
+import 'package:frontend/clients/bands_client.dart';
 
 class BandsPage extends StatefulWidget {
   final VoidCallback onProfileTap;
@@ -22,7 +25,32 @@ class _BandsPageState extends State<BandsPage> {
   final TextEditingController searchController =
   TextEditingController();
 
-  Map<String, String>? myBand;
+  Band? myBand;
+  bool isLoadingBand = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyBand();
+  }
+
+  Future<void> _loadMyBand() async {
+    try {
+      final band = await BandsClient.instance.getMyBand();
+      if (!mounted) return;
+      setState(() {
+        myBand = band;
+      });
+    } catch (_) {
+      // keep myBand null; the create flow surfaces real errors
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingBand = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -158,6 +186,33 @@ class _BandsPageState extends State<BandsPage> {
 
   // Create Band / My Band Button
   Widget buildMyBandButton() {
+    if (isLoadingBand) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+            child: const SizedBox(
+              width: 23,
+              height: 23,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final bool bandExists = myBand != null;
 
     return Padding(
@@ -168,7 +223,7 @@ class _BandsPageState extends State<BandsPage> {
         child: ElevatedButton.icon(
           onPressed: () async {
             if (!bandExists) {
-              final result = await Navigator.push<Map<String, String>>(
+              final result = await Navigator.push<Band>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const CreateBandPage(),
@@ -188,19 +243,20 @@ class _BandsPageState extends State<BandsPage> {
                 );
               }
             } else {
-              Navigator.push(
+              final result = await Navigator.push<Band>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => MyBandPage(
                     band: myBand!,
-                    onBandUpdated: (updatedBand) {
-                      setState(() {
-                        myBand = updatedBand;
-                      });
-                    },
                   ),
                 ),
               );
+
+              if (result != null && mounted) {
+                setState(() {
+                  myBand = result;
+                });
+              }
             }
           },
           icon: Icon(
@@ -290,13 +346,11 @@ class _BandsPageState extends State<BandsPage> {
 // MY BAND DETAILS PAGE
 
 class MyBandPage extends StatefulWidget {
-  final Map<String, String> band;
-  final Function(Map<String, String>) onBandUpdated;
+  final Band band;
 
   const MyBandPage({
     super.key,
     required this.band,
-    required this.onBandUpdated,
   });
 
   @override
@@ -308,38 +362,12 @@ class _MyBandPageState extends State<MyBandPage> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
-  late Map<String, String> band;
+  late Band _band;
 
   @override
   void initState() {
     super.initState();
-    band = Map<String, String>.from(widget.band);
-  }
-
-  Future<void> editBand() async {
-    final result = await Navigator.push<Map<String, String>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CreateBandPage(
-          initialData: band,
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        band = result;
-      });
-
-      widget.onBandUpdated(result);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Band details updated successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
+    _band = widget.band;
   }
 
   void addPosts() {
@@ -349,6 +377,28 @@ class _MyBandPageState extends State<MyBandPage> {
         builder: (context) => const BandsPostPage(),
       ),
     );
+  }
+
+  Future<void> editBand() async {
+    final updated = await Navigator.push<Band>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditBandPage(band: _band),
+      ),
+    );
+
+    if (updated != null && mounted) {
+      setState(() {
+        _band = updated;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Band updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Widget buildInfoCard() {
@@ -366,6 +416,7 @@ class _MyBandPageState extends State<MyBandPage> {
             child: Container(
               width: 110,
               height: 110,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: const Color(0xFF303039),
                 borderRadius: BorderRadius.circular(25),
@@ -374,7 +425,20 @@ class _MyBandPageState extends State<MyBandPage> {
                   width: 1.5,
                 ),
               ),
-              child: const Icon(
+              child: _band.profilePicUrl != null
+                  ? Image.network(
+                _band.profilePicUrl!,
+                width: 110,
+                height: 110,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                const Icon(
+                  Icons.groups,
+                  color: orange,
+                  size: 55,
+                ),
+              )
+                  : const Icon(
                 Icons.groups,
                 color: orange,
                 size: 55,
@@ -386,7 +450,7 @@ class _MyBandPageState extends State<MyBandPage> {
 
           Center(
             child: Text(
-              band['name'] ?? '',
+              _band.bandName,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
@@ -409,7 +473,7 @@ class _MyBandPageState extends State<MyBandPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                band['genre'] ?? '',
+                _band.genre,
                 style: const TextStyle(
                   color: orange,
                   fontSize: 14,
@@ -433,7 +497,7 @@ class _MyBandPageState extends State<MyBandPage> {
           const SizedBox(height: 10),
 
           Text(
-            band['description'] ?? '',
+            _band.description ?? '',
             style: const TextStyle(
               color: secondaryText,
               fontSize: 15,
@@ -489,7 +553,7 @@ class _MyBandPageState extends State<MyBandPage> {
           const SizedBox(height: 12),
 
           const Text(
-            'Member management will be connected later.',
+            'Member management coming soon.',
             style: TextStyle(
               color: secondaryText,
               fontSize: 12,
@@ -598,52 +662,58 @@ class _MyBandPageState extends State<MyBandPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, _band);
+        return false;
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFF121212),
-        elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
-        title: const Text(
-          'My Band',
-          style: TextStyle(
+
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF121212),
+          elevation: 0,
+          iconTheme: const IconThemeData(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
+          ),
+          title: const Text(
+            'My Band',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(22, 15, 22, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            buildInfoCard(),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 15, 22, 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildInfoCard(),
 
-            const SizedBox(height: 22),
+              const SizedBox(height: 22),
 
-            buildMembersCard(),
+              buildMembersCard(),
 
-            const SizedBox(height: 25),
+              const SizedBox(height: 25),
 
-            buildActionButton(
-              title: 'Edit Band',
-              icon: Icons.edit_outlined,
-              onPressed: editBand,
-              outlined: true,
-            ),
+              buildActionButton(
+                title: 'Add Posts',
+                icon: Icons.add_photo_alternate_outlined,
+                onPressed: addPosts,
+              ),
 
-            const SizedBox(height: 15),
+              const SizedBox(height: 15),
 
-            buildActionButton(
-              title: 'Add Posts',
-              icon: Icons.add_photo_alternate_outlined,
-              onPressed: addPosts,
-            ),
-          ],
+              buildActionButton(
+                title: 'Edit Band Profile',
+                icon: Icons.edit_outlined,
+                onPressed: editBand,
+                outlined: true,
+              ),
+            ],
+          ),
         ),
       ),
     );

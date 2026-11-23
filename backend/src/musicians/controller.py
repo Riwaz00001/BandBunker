@@ -188,3 +188,5 @@ def update_profile(bio: str | None, file: UploadFile | None, user: musicians, db
             print("cleanup error:", e)
 
     return profile_out(user, p)
+
+
