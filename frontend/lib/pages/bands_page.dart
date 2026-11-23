@@ -2,30 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/create_band.dart';
 import 'package:frontend/pages/bands_posts.dart';
-import '../clients/musician_client.dart';
-import '../models/musician_models.dart';
-
-class Band {
-  final String name;
-  final String genre;
-  final String location;
-  final String description;
-  final String lookingFor;
-  final String imageUrl;
-  final List<String> instruments;
-  final int members;
-
-  const Band({
-    required this.name,
-    required this.genre,
-    required this.location,
-    required this.description,
-    required this.lookingFor,
-    required this.imageUrl,
-    required this.instruments,
-    required this.members,
-  });
-}
 
 class BandsPage extends StatefulWidget {
   const BandsPage({super.key});
@@ -42,26 +18,7 @@ class _BandsPageState extends State<BandsPage> {
   final TextEditingController searchController =
   TextEditingController();
 
-  // Empty until real band information comes from the backend.
-  final List<Band> bands = [];
-  bool hasCreatedBand = false;
-  Profile? _profile;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-  }
-
-  Future<void> _loadProfile() async {
-    try {
-      final profile = await MusicianClient.instance.getProfile();
-      if (profile.profilePicUrl != null && profile.profilePicUrl!.isNotEmpty && mounted) {
-        await precacheImage(NetworkImage(profile.profilePicUrl!), context);
-      }
-      if (mounted) setState(() => _profile = profile);
-    } catch (_) {}
-  }
+  Map<String, String>? myBand;
 
   @override
   void dispose() {
@@ -69,7 +26,6 @@ class _BandsPageState extends State<BandsPage> {
     super.dispose();
   }
 
-  // Top Header
   Widget buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -87,9 +43,7 @@ class _BandsPageState extends State<BandsPage> {
               fit: BoxFit.contain,
             ),
           ),
-
           const SizedBox(width: 15),
-
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,113 +68,44 @@ class _BandsPageState extends State<BandsPage> {
               ],
             ),
           ),
-
-           Container(
-             width: 48,
-             height: 48,
-             decoration: BoxDecoration(
-               shape: BoxShape.circle,
-               border: Border.all(
-                 color: orange,
-                 width: 2,
-               ),
-             ),
-             child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
-                 ? ClipOval(
-                     child: Image.network(
-                       _profile!.profilePicUrl!,
-                       width: 44,
-                       height: 44,
-                       fit: BoxFit.cover,
-                       errorBuilder: (_, __, ___) => const Icon(
-                         Icons.person_outline,
-                         color: Colors.white,
-                         size: 28,
-                       ),
-                     ),
-                   )
-                 : const Icon(
-                     Icons.person_outline,
-                     color: Colors.white,
-                     size: 28,
-                   ),
-           ),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: orange,
+                width: 2,
+              ),
+            ),
+            child: const Icon(
+              Icons.groups_outlined,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // Page Heading
   Widget buildHeading() {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
-      child: Text(
-        'Bands Looking for Members',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-// Add Band Posts Button
-
-// Add Band Posts Button
-  Widget buildAddPostsButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: OutlinedButton.icon(
-          onPressed: () {
-            if (!hasCreatedBand && bands.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'No band found. Please create a band first before adding posts.',
-                  ),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-              return;
-            }
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BandsPostPage(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.add_photo_alternate_outlined),
-          label: const Text(
-            'Add Posts',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: orange,
-            side: const BorderSide(
-              color: orange,
-              width: 1.5,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Bands Looking for Members',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
     );
   }
 
-
-
-  // Search Bar (no category filtering)
   Widget buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -264,9 +149,10 @@ class _BandsPageState extends State<BandsPage> {
     );
   }
 
+  // Create Band / My Band Button
+  Widget buildMyBandButton() {
+    final bool bandExists = myBand != null;
 
-// Create Band Button
-  Widget buildCreateBandButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       child: SizedBox(
@@ -274,26 +160,49 @@ class _BandsPageState extends State<BandsPage> {
         height: 52,
         child: ElevatedButton.icon(
           onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CreateBandPage(),
-              ),
-            );
+            if (!bandExists) {
+              final result = await Navigator.push<Map<String, String>>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateBandPage(),
+                ),
+              );
 
-            if (result == true && mounted) {
-              setState(() {
-                hasCreatedBand = true;
-              });
+              if (result != null && mounted) {
+                setState(() {
+                  myBand = result;
+                });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Band created successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MyBandPage(
+                    band: myBand!,
+                    onBandUpdated: (updatedBand) {
+                      setState(() {
+                        myBand = updatedBand;
+                      });
+                    },
+                  ),
+                ),
+              );
             }
           },
-          icon: const Icon(
-            Icons.add,
+          icon: Icon(
+            bandExists ? Icons.groups : Icons.add,
             size: 23,
           ),
-          label: const Text(
-            'Create Band',
-            style: TextStyle(
+          label: Text(
+            bandExists ? 'My Band' : 'Create Band',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -310,232 +219,6 @@ class _BandsPageState extends State<BandsPage> {
     );
   }
 
-
-  // Band Image
-  Widget buildBandImage(Band band) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(15),
-      child: band.imageUrl.isNotEmpty
-          ? Image.network(
-        band.imageUrl,
-        width: 85,
-        height: 85,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return buildImagePlaceholder();
-        },
-      )
-          : buildImagePlaceholder(),
-    );
-  }
-
-  Widget buildImagePlaceholder() {
-    return Container(
-      width: 85,
-      height: 85,
-      color: const Color(0xFF303039),
-      child: const Icon(
-        Icons.groups,
-        color: secondaryText,
-        size: 42,
-      ),
-    );
-  }
-
-  // Individual Band Card
-  Widget buildBandCard(Band band) {
-    return Container(
-      margin: const EdgeInsets.only(
-        left: 22,
-        right: 22,
-        bottom: 22,
-      ),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Band Information
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildBandImage(band),
-
-              const SizedBox(width: 15),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      band.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      band.location,
-                      style: const TextStyle(
-                        color: secondaryText,
-                        fontSize: 14,
-                      ),
-                    ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      '${band.genre} • ${band.members} Members',
-                      style: const TextStyle(
-                        color: Color(0xFFFFA982),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Looking for a Member
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 13,
-              vertical: 9,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFF493020),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.graphic_eq,
-                  color: Color(0xFFFFB08F),
-                  size: 18,
-                ),
-
-                const SizedBox(width: 7),
-
-                Flexible(
-                  child: Text(
-                    'Looking for ${band.lookingFor}',
-                    style: const TextStyle(
-                      color: Color(0xFFFFB08F),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 15),
-
-          Text(
-            band.description,
-            style: const TextStyle(
-              color: secondaryText,
-              fontSize: 14,
-            ),
-          ),
-
-          const SizedBox(height: 15),
-
-          // Instruments / Requirements
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: band.instruments.map((instrument) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF303039),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  instrument,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 22),
-
-          // Buttons
-          Row(
-            children: [
-              TextButton(
-                onPressed: () {
-                  // Open band details page later.
-                },
-                child: const Text(
-                  'View Band  →',
-                  style: TextStyle(
-                    color: secondaryText,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-
-              ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Connect feature will be available soon.',
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.person_add_alt_1,
-                  size: 19,
-                ),
-                label: const Text('Connect'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 15,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Empty State
   Widget buildEmptyState() {
     return const Center(
       child: Padding(
@@ -548,9 +231,7 @@ class _BandsPageState extends State<BandsPage> {
               color: Colors.white24,
               size: 65,
             ),
-
             SizedBox(height: 15),
-
             Text(
               'No bands available yet',
               textAlign: TextAlign.center,
@@ -560,9 +241,7 @@ class _BandsPageState extends State<BandsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             SizedBox(height: 8),
-
             Text(
               'Bands looking for musicians will appear here when they join Band Bunker.',
               textAlign: TextAlign.center,
@@ -582,39 +261,384 @@ class _BandsPageState extends State<BandsPage> {
     return Column(
       children: [
         buildHeader(),
-
         const SizedBox(height: 22),
-
         buildHeading(),
-
         const SizedBox(height: 22),
-
         buildSearchBar(),
+        const SizedBox(height: 18),
 
-        const SizedBox(height: 15),
-
-        buildCreateBandButton(),
-
-        const SizedBox(height: 12),
-
-        buildAddPostsButton(),
+        // This button changes from Create Band to My Band.
+        buildMyBandButton(),
 
         const SizedBox(height: 18),
 
         Expanded(
-          child: bands.isEmpty
-              ? buildEmptyState()
-              : ListView.builder(
-            itemCount: bands.length,
-            itemBuilder: (context, index) {
-              return buildBandCard(
-                bands[index],
-              );
-            },
-          ),
+          child: buildEmptyState(),
         ),
       ],
     );
   }
 }
 
+// MY BAND DETAILS PAGE
+
+class MyBandPage extends StatefulWidget {
+  final Map<String, String> band;
+  final Function(Map<String, String>) onBandUpdated;
+
+  const MyBandPage({
+    super.key,
+    required this.band,
+    required this.onBandUpdated,
+  });
+
+  @override
+  State<MyBandPage> createState() => _MyBandPageState();
+}
+
+class _MyBandPageState extends State<MyBandPage> {
+  static const Color orange = Color(0xFFFF7A00);
+  static const Color cardColor = Color(0xFF202026);
+  static const Color secondaryText = Color(0xFFBDB8C9);
+
+  late Map<String, String> band;
+
+  @override
+  void initState() {
+    super.initState();
+    band = Map<String, String>.from(widget.band);
+  }
+
+  Future<void> editBand() async {
+    final result = await Navigator.push<Map<String, String>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateBandPage(
+          initialData: band,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        band = result;
+      });
+
+      widget.onBandUpdated(result);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Band details updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void addPosts() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BandsPostPage(),
+      ),
+    );
+  }
+
+  Widget buildInfoCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                color: const Color(0xFF303039),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: orange,
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.groups,
+                color: orange,
+                size: 55,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          Center(
+            child: Text(
+              band['name'] ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: orange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                band['genre'] ?? '',
+                style: const TextStyle(
+                  color: orange,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 25),
+
+          const Text(
+            'About Our Band',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            band['description'] ?? '',
+            style: const TextStyle(
+              color: secondaryText,
+              fontSize: 15,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildMembersCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.groups_outlined,
+                color: orange,
+              ),
+              SizedBox(width: 9),
+              Text(
+                'Band Members',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          Row(
+            children: [
+              buildMember('Pratik', 'Guitarist'),
+              const SizedBox(width: 22),
+              buildMember('Member 2', 'Vocalist'),
+              const SizedBox(width: 22),
+              buildMember('Member 3', 'Drummer'),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          const Text(
+            'Member management will be connected later.',
+            style: TextStyle(
+              color: secondaryText,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildMember(String name, String role) {
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 55,
+            height: 55,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF303039),
+              border: Border.all(
+                color: orange,
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.person,
+              color: secondaryText,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            role,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: secondaryText,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildActionButton({
+    required String title,
+    required IconData icon,
+    required VoidCallback onPressed,
+    bool outlined = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: outlined
+          ? OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: orange,
+          side: const BorderSide(
+            color: orange,
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+      )
+          : ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: orange,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        elevation: 0,
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
+        title: const Text(
+          'My Band',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(22, 15, 22, 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            buildInfoCard(),
+
+            const SizedBox(height: 22),
+
+            buildMembersCard(),
+
+            const SizedBox(height: 25),
+
+            buildActionButton(
+              title: 'Edit Band',
+              icon: Icons.edit_outlined,
+              onPressed: editBand,
+              outlined: true,
+            ),
+
+            const SizedBox(height: 15),
+
+            buildActionButton(
+              title: 'Add Posts',
+              icon: Icons.add_photo_alternate_outlined,
+              onPressed: addPosts,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
