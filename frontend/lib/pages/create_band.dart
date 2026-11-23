@@ -1,13 +1,13 @@
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../clients/bands_client.dart';
+import '../clients/musician_client.dart';
 
 class CreateBandPage extends StatefulWidget {
-  final Map<String, String>? initialData;
-
-  const CreateBandPage({
-    super.key,
-    this.initialData,
-  });
+  const CreateBandPage({super.key});
 
   @override
   State<CreateBandPage> createState() => _CreateBandPageState();
@@ -24,7 +24,11 @@ class _CreateBandPageState extends State<CreateBandPage> {
   final TextEditingController descriptionController =
   TextEditingController();
 
+  final ImagePicker _picker = ImagePicker();
+
+  File? selectedImage;
   String? selectedGenre;
+  bool isLoading = false;
 
   final List<String> genres = [
     'Rock',
@@ -37,29 +41,6 @@ class _CreateBandPageState extends State<CreateBandPage> {
     'Other',
   ];
 
-  final List<Map<String, String>> members = [
-    {'name': 'Pratik', 'role': 'Guitarist'},
-    {'name': 'Member 2', 'role': 'Vocalist'},
-    {'name': 'Member 3', 'role': 'Drummer'},
-  ];
-
-  bool get isEditing => widget.initialData != null;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (isEditing) {
-      bandNameController.text =
-          widget.initialData!['name'] ?? '';
-
-      descriptionController.text =
-          widget.initialData!['description'] ?? '';
-
-      selectedGenre = widget.initialData!['genre'];
-    }
-  }
-
   @override
   void dispose() {
     bandNameController.dispose();
@@ -67,14 +48,18 @@ class _CreateBandPageState extends State<CreateBandPage> {
     super.dispose();
   }
 
-  void showMemberMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Adding band members will be available later.',
-        ),
-      ),
+  Future<void> pickImage() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1440,
     );
+
+    if (picked != null && mounted) {
+      setState(() {
+        selectedImage = File(picked.path);
+      });
+    }
   }
 
   InputDecoration buildInputDecoration(String hint) {
@@ -127,12 +112,11 @@ class _CreateBandPageState extends State<CreateBandPage> {
       child: Column(
         children: [
           GestureDetector(
-            onTap: () {
-              // Band picture upload will be connected later.
-            },
+            onTap: isLoading ? null : pickImage,
             child: Container(
               width: 125,
               height: 125,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(25),
@@ -141,7 +125,14 @@ class _CreateBandPageState extends State<CreateBandPage> {
                   width: 1.5,
                 ),
               ),
-              child: const Column(
+              child: selectedImage != null
+                  ? Image.file(
+                selectedImage!,
+                width: 125,
+                height: 125,
+                fit: BoxFit.cover,
+              )
+                  : const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
@@ -183,11 +174,13 @@ class _CreateBandPageState extends State<CreateBandPage> {
         final bool isSelected = selectedGenre == genre;
 
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              selectedGenre = genre;
-            });
-          },
+          onTap: isLoading
+              ? null
+              : () {
+                  setState(() {
+                    selectedGenre = genre;
+                  });
+                },
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 18,
@@ -216,124 +209,7 @@ class _CreateBandPageState extends State<CreateBandPage> {
     );
   }
 
-  Widget buildMembersSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: buildSectionTitle('Band Members'),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: orange.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                onPressed: showMemberMessage,
-                icon: const Icon(
-                  Icons.add,
-                  color: orange,
-                  size: 25,
-                ),
-                tooltip: 'Add band member',
-              ),
-            ),
-          ],
-        ),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.groups_outlined,
-                    color: orange,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${members.length} Members',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                height: 105,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: members.length,
-                  separatorBuilder: (context, index) =>
-                  const SizedBox(width: 22),
-                  itemBuilder: (context, index) {
-                    return Column(
-                      children: [
-                        Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF303039),
-                            border: Border.all(
-                              color: orange,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            color: secondaryText,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          members[index]['name']!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          members[index]['role']!,
-                          style: const TextStyle(
-                            color: secondaryText,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'Member profiles will be connected later.',
-                style: TextStyle(
-                  color: secondaryText,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void saveBand() {
+  Future<void> saveBand() async {
     if (bandNameController.text.trim().isEmpty ||
         descriptionController.text.trim().isEmpty ||
         selectedGenre == null) {
@@ -348,13 +224,37 @@ class _CreateBandPageState extends State<CreateBandPage> {
       return;
     }
 
-    final Map<String, String> bandData = {
-      'name': bandNameController.text.trim(),
-      'description': descriptionController.text.trim(),
-      'genre': selectedGenre!,
-    };
+    setState(() {
+      isLoading = true;
+    });
 
-    Navigator.pop(context, bandData);
+    try {
+      final band = await BandsClient.instance.createBand(
+        bandName: bandNameController.text.trim(),
+        description: descriptionController.text.trim(),
+        genre: selectedGenre!,
+        image: selectedImage,
+      );
+
+      if (mounted) {
+        Navigator.pop(context, band);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -367,9 +267,9 @@ class _CreateBandPageState extends State<CreateBandPage> {
         iconTheme: const IconThemeData(
           color: Colors.white,
         ),
-        title: Text(
-          isEditing ? 'Edit Band' : 'Create Band',
-          style: const TextStyle(
+        title: const Text(
+          'Create Band',
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
@@ -410,23 +310,26 @@ class _CreateBandPageState extends State<CreateBandPage> {
             buildSectionTitle('Select Music Genre'),
             buildGenreSelection(),
 
-            const SizedBox(height: 28),
-
-            buildMembersSection(),
-
             const SizedBox(height: 30),
 
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton.icon(
-                onPressed: saveBand,
-                icon: Icon(
-                  isEditing ? Icons.save_outlined : Icons.add,
-                  size: 22,
-                ),
+                onPressed: isLoading ? null : saveBand,
+                icon: isLoading
+                    ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                    AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+                    : const Icon(Icons.add, size: 22),
                 label: Text(
-                  isEditing ? 'Save Changes' : 'Create Band',
+                  isLoading ? 'Creating...' : 'Create Band',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

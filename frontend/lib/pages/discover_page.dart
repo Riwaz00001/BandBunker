@@ -21,6 +21,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
   final List<Post> posts = [];
   bool _loading = true;
+  Profile? _profile;
 
   @override
   void dispose() {
@@ -48,10 +49,21 @@ class _DiscoverPageState extends State<DiscoverPage> {
     }
   }
 
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await MusicianClient.instance.getProfile();
+      if (profile.profilePicUrl != null && profile.profilePicUrl!.isNotEmpty && mounted) {
+        await precacheImage(NetworkImage(profile.profilePicUrl!), context);
+      }
+      if (mounted) setState(() => _profile = profile);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
     _loadPosts();
+    _loadProfile();
   }
 
   // Top Header
@@ -100,22 +112,36 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
           ),
 
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: orange,
-                width: 2,
-              ),
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
+           Container(
+             width: 48,
+             height: 48,
+             decoration: BoxDecoration(
+               shape: BoxShape.circle,
+               border: Border.all(
+                 color: orange,
+                 width: 2,
+               ),
+             ),
+             child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
+                 ? ClipOval(
+                     child: Image.network(
+                       _profile!.profilePicUrl!,
+                       width: 44,
+                       height: 44,
+                       fit: BoxFit.cover,
+                       errorBuilder: (_, __, ___) => const Icon(
+                         Icons.person_outline,
+                         color: Colors.white,
+                         size: 28,
+                       ),
+                     ),
+                   )
+                 : const Icon(
+                     Icons.person_outline,
+                     color: Colors.white,
+                     size: 28,
+                   ),
+           ),
         ],
       ),
     );
