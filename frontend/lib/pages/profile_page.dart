@@ -31,6 +31,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Band? _myBand;
   bool _loading = true;
   bool _sendingInvite = false;
+  int? _myMusicianId;
 
   final List<Post> _posts = [];
   bool _postsLoading = true;
@@ -38,9 +39,15 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _loadMyMusicianId();
     _loadProfile();
     _loadPosts();
     _loadMyBand();
+  }
+
+  Future<void> _loadMyMusicianId() async {
+    final id = await TokenStorage.getMusicianId();
+    if (mounted) setState(() => _myMusicianId = id);
   }
 
   Future<void> _loadProfile() async {
@@ -109,8 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   bool get _isOwnProfile {
-    final myId = TokenStorage.getMusicianId();
-    return myId != null && myId == widget.musicianId;
+    return _myMusicianId != null && _myMusicianId == widget.musicianId;
   }
 
   bool get _showInviteButton => !_isOwnProfile && _myBand != null;
@@ -278,7 +284,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 18),
 
-              // Posts grid
+              // Posts list (full-width like DiscoverPage)
               if (_postsLoading)
                 const Center(child: CircularProgressIndicator(color: orange))
               else if (_posts.isEmpty)
@@ -292,22 +298,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 )
               else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _posts.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.9,
-                    ),
-                    itemBuilder: (context, index) {
-                      return PostCard(post: _posts[index]);
-                    },
-                  ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _posts.length,
+                  itemBuilder: (context, index) {
+                    return PostCard(post: _posts[index]);
+                  },
                 ),
 
               const SizedBox(height: 30),

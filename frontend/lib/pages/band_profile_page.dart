@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/helpers/alert_helper.dart';
 import 'package:frontend/models/band_models.dart';
+import 'package:frontend/services/token_storage.dart';
 import 'package:frontend/widgets/member_tile.dart';
 import 'package:frontend/pages/profile_page.dart';
+import 'package:frontend/pages/edit_band.dart';
 
 class BandProfilePage extends StatefulWidget {
   final int bandId;
@@ -26,6 +28,7 @@ class _BandProfilePageState extends State<BandProfilePage> {
   Band? _band;
   BandMembersResponse? _membersResponse;
   bool _loading = true;
+  bool _isOwner = false;
 
   @override
   void initState() {
@@ -41,9 +44,17 @@ class _BandProfilePageState extends State<BandProfilePage> {
         BandsClient.instance.getBandMembers(widget.bandId),
       ]);
       if (mounted) {
+        final band = results[0] as Band;
+        final membersResponse = results[1] as BandMembersResponse;
+        
+        // Check if current user is the band owner
+        final myId = await TokenStorage.getMusicianId();
+        final isOwner = myId != null && membersResponse.members.any((m) => m.musicianId == myId && m.role == 'owner');
+        
         setState(() {
-          _band = results[0] as Band;
-          _membersResponse = results[1] as BandMembersResponse;
+          _band = band;
+          _membersResponse = membersResponse;
+          _isOwner = isOwner;
           _loading = false;
         });
       }
@@ -52,6 +63,18 @@ class _BandProfilePageState extends State<BandProfilePage> {
         setState(() => _loading = false);
         AlertHelper.error(context, e.toString());
       }
+    }
+  }
+
+  Future<void> _navigateToEditBand() async {
+    if (_band == null) return;
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => EditBandPage(band: _band!)),
+    );
+    if (result != null && mounted) {
+      // Refresh data if band was updated
+      _loadData();
     }
   }
 
@@ -95,6 +118,14 @@ class _BandProfilePageState extends State<BandProfilePage> {
           'Band Profile',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          if (_isOwner)
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: _navigateToEditBand,
+              tooltip: 'Edit Band',
+            ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
