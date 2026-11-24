@@ -28,7 +28,7 @@ class _ProfilePageState extends State<ProfilePage> {
   static const Color secondaryText = Color(0xFFBDB8C9);
 
   Profile? _profile;
-  Band? _myBand;
+  List<Band> _myBands = [];
   bool _loading = true;
   bool _sendingInvite = false;
   int? _myMusicianId;
@@ -42,7 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadMyMusicianId();
     _loadProfile();
     _loadPosts();
-    _loadMyBand();
+    _loadMyBands();
   }
 
   Future<void> _loadMyMusicianId() async {
@@ -67,11 +67,11 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _loadMyBand() async {
+  Future<void> _loadMyBands() async {
     try {
-      final band = await BandsClient.instance.getMyBand();
+      final bands = await BandsClient.instance.getMyBands();
       if (mounted) {
-        setState(() => _myBand = band);
+        setState(() => _myBands = bands);
       }
     } catch (_) {}
   }
@@ -98,7 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _sendInvite() async {
-    if (_myBand == null || _sendingInvite) return;
+    if (_ownedBand == null || _sendingInvite) return;
 
     setState(() => _sendingInvite = true);
     try {
@@ -119,7 +119,15 @@ class _ProfilePageState extends State<ProfilePage> {
     return _myMusicianId != null && _myMusicianId == widget.musicianId;
   }
 
-  bool get _showInviteButton => !_isOwnProfile && _myBand != null;
+  Band? get _ownedBand {
+    try {
+      return _myBands.firstWhere((b) => b.ownerId == _myMusicianId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool get _showInviteButton => !_isOwnProfile && _ownedBand != null;
 
   Widget _buildAvatar() {
     if (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty) {
@@ -194,7 +202,7 @@ class _ProfilePageState extends State<ProfilePage> {
         onRefresh: () async {
           await _loadProfile();
           await _loadPosts();
-          await _loadMyBand();
+          await _loadMyBands();
         },
         color: orange,
         child: SingleChildScrollView(

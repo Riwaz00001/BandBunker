@@ -30,6 +30,7 @@ class _BandsPageState extends State<BandsPage> {
   List<Band> myBands = [];
   bool isLoadingBands = true;
   int? myMusicianId;
+  int _inviteCount = 0;
 
   @override
   void initState() {
@@ -39,7 +40,10 @@ class _BandsPageState extends State<BandsPage> {
 
   Future<void> _loadData() async {
     await _loadMyMusicianId();
-    await _loadMyBands();
+    await Future.wait([
+      _loadMyBands(),
+      _loadInviteCount(),
+    ]);
   }
 
   Future<void> _loadMyMusicianId() async {
@@ -72,6 +76,25 @@ class _BandsPageState extends State<BandsPage> {
       }
     }
   }
+
+  Future<void> _loadInviteCount() async {
+    try {
+      final invites = await BandsClient.instance.getInvites();
+      if (mounted) {
+        setState(() => _inviteCount = invites.length);
+      }
+    } catch (_) {}
+  }
+
+  Band? get _ownedBand {
+    try {
+      return myBands.firstWhere((b) => b.ownerId == myMusicianId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<Band> get _joinedBands => myBands.where((b) => b.ownerId != myMusicianId).toList();
 
   @override
   void dispose() {
@@ -122,15 +145,44 @@ class _BandsPageState extends State<BandsPage> {
             ),
           ),
           // Invites button
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const InvitesPage()),
-              ).then((_) => _loadMyBands());
-            },
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
-            tooltip: 'Invites',
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const InvitesPage()),
+                  ).then((_) {
+                    _loadMyBands();
+                    _loadInviteCount();
+                  });
+                },
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
+                tooltip: 'Invites',
+              ),
+              if (_inviteCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      _inviteCount > 9 ? '9+' : '$_inviteCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           GestureDetector(
             onTap: widget.onProfileTap,
@@ -245,8 +297,6 @@ class _BandsPageState extends State<BandsPage> {
       );
     }
 
-    final bool ownsBand = myBands.any((b) => b.ownerId == myMusicianId);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       child: SizedBox(
@@ -254,7 +304,7 @@ class _BandsPageState extends State<BandsPage> {
         height: 52,
         child: ElevatedButton.icon(
           onPressed: () async {
-            if (!ownsBand) {
+            if (_ownedBand == null) {
               final result = await Navigator.push<Band>(
                 context,
                 MaterialPageRoute(
@@ -275,11 +325,10 @@ class _BandsPageState extends State<BandsPage> {
                 );
               }
             } else {
-              final ownedBand = myBands.firstWhere((b) => b.ownerId == myMusicianId);
               final result = await Navigator.push<Band>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BandProfilePage(bandId: ownedBand.bandId),
+                  builder: (context) => BandProfilePage(bandId: _ownedBand!.bandId),
                 ),
               );
 
@@ -292,11 +341,11 @@ class _BandsPageState extends State<BandsPage> {
             }
           },
           icon: Icon(
-            ownsBand ? Icons.groups : Icons.add,
+            _ownedBand != null ? Icons.groups : Icons.add,
             size: 23,
           ),
           label: Text(
-            ownsBand ? 'My Band' : 'Create Band',
+            _ownedBand != null ? 'My Band' : 'Create Band',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -311,6 +360,42 @@ class _BandsPageState extends State<BandsPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget buildJoinedBandsSection() {
+    if (_joinedBands.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Joined Bands',
+            style: TextStyle(
+              color: secondaryText,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          itemCount: _joinedBands.length,
+          itemBuilder: (context, index) {
+            final band = _joinedBands[index];
+            return BandCard(
+              band: band,
+              isOwner: false,
+            );
+          },
+        ),
+        const SizedBox(height: 18),
+      ],
     );
   }
 
@@ -362,7 +447,10 @@ class _BandsPageState extends State<BandsPage> {
         buildSearchBar(),
         const SizedBox(height: 18),
 
-        // This button changes from Create Band to My Band.
+        // Joined Bands section (bands user is member of but doesn't own)
+        buildJoinedBandsSection(),
+
+        // Create Band / My Band button
         buildMyBandButton(),
 
         const SizedBox(height: 18),
@@ -385,13 +473,12 @@ class _BandsPageState extends State<BandsPage> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: myBands.length,
+                        itemCount: _ownedBand != null ? 1 : 0,
                         itemBuilder: (context, index) {
-                          final band = myBands[index];
-                          final isOwner = band.ownerId == myMusicianId;
+                          final band = _ownedBand!;
                           return BandCard(
                             band: band,
-                            isOwner: isOwner,
+                            isOwner: true,
                           );
                         },
                       ),

@@ -132,6 +132,32 @@ def reject_invite(invite_id: int, user: musicians, db: Session):
     db.delete(inv)
     db.commit()
 
+def accept_invite(invite_id: int, user: musicians, db: Session):
+    inv = db.get(band_invites, invite_id)
+    if not inv or inv.musician_id != user.musician_id:
+        raise HTTPException(404, "Invite not found")
+    
+    band = db.get(bands, inv.band_id)
+    if not band:
+        raise HTTPException(404, "Band not found")
+    
+    # Check if already a member
+    existing = db.query(band_members).filter(
+        band_members.band_id == band.band_id,
+        band_members.musician_id == user.musician_id
+    ).first()
+    if existing:
+        db.delete(inv)
+        db.commit()
+        raise HTTPException(409, "Already a member")
+    
+    # Add as member
+    db.add(band_members(band_id=band.band_id, musician_id=user.musician_id, role="member"))
+    db.delete(inv)
+    db.commit()
+    db.refresh(band)
+    return band_out(band)
+
 def send_invite(musician_id: int, user: musicians, db: Session):
     if musician_id == user.musician_id:
         raise HTTPException(400, "You cannot invite yourself")

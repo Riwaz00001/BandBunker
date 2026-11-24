@@ -5,7 +5,7 @@ from src.bands.models import bands,band_members,band_invites
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
 from src.musicians.models import musicians
-from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite
+from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite
 bands_router=APIRouter(prefix="/bands")
 
 # Fixed paths MUST come before /{band_id}
@@ -28,6 +28,10 @@ def band_members(band_id: int, db: Session = Depends(get_db), user: musicians = 
 @bands_router.delete("/invites/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
 def reject_invite_route(invite_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
     return reject_invite(invite_id, user, db)
+
+@bands_router.put("/invites/{invite_id}/accept", response_model=band_response)
+def accept_invite_route(invite_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return accept_invite(invite_id, user, db)
 
 @bands_router.post("/invite/{musician_id}", response_model=invite_response)
 def invite_musician(musician_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
