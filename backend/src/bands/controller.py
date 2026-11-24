@@ -1,8 +1,9 @@
 from fastapi import File,UploadFile,HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from supabase import Client ,create_client
 from src.utils.settings import settings
-from src.bands.models import bands,band_members
+from src.bands.models import bands,band_members,band_invites
 from src.musicians.models import musicians
 import uuid 
 supabase: Client=create_client(settings.supabase_url,settings.supabase_key)
@@ -106,3 +107,43 @@ def update_band(band_id: int,band_name: str | None,description: str | None,genre
             print("cleanup error:", e)
 
     return band_out(band)
+
+
+#band invites
+
+def invite_out(inv: band_invites, band: bands) -> dict:
+    return {
+        "invite_id": inv.invite_id,
+        "band_id": band.band_id,
+        "band_name": band.band_name,
+        "musician_id": inv.musician_id,
+        "profile_pic_url": pic_url(band.profile_pic_path),
+    }
+
+def create_invite(musician_id: int, user: musicians, db: Session):
+    band = db.query(bands).filter(bands.owner_id == user.musician_id).first()
+    if not band:
+        raise HTTPException(403, "Create a band before sending invites")
+    if musician_id == user.musician_id:
+        raise HTTPException(400, "You cannot invite yourself")
+    if not db.get(musicians, musician_id):
+        raise HTTPException(404, "Musician not found")
+    if db.get(band_members, (band.band_id, musician_id)):
+        raise HTTPException(409, "Already a member of your band")
+    if db.query(band_invites).filter_by(band_id=band.band_id, musician_id=musician_id).first():
+        raise HTTPException(409, "Invite already sent")
+
+    try:
+        inv = band_invites(band_id=band.band_id, musician_id=musician_id)
+        db.add(inv)
+        db.commit()
+        db.refresh(inv)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Invite already sent")
+    except Exception as e:
+        db.rollback()
+        print("db error:", e)
+        raise HTTPException(500, "Could not send invite")
+    return invite_out(inv, band)
+

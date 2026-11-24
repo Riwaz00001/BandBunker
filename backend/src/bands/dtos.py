@@ -8,3 +8,9 @@ class band_response(BaseModel):
     profile_pic_url:str|None
     owner_id:int
 
+class invite_response(BaseModel):
+    invite_id:int
+    band_name:str
+    band_id:int
+    musician_id:int
+    profile_pic_url:str|None

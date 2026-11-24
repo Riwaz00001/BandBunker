@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends,status,File,UploadFile,Form
 from sqlalchemy.orm import Session
-from src.bands.dtos import band_response
+from src.bands.dtos import band_response,invite_response
 from src.bands.models import bands,band_members
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
 from src.musicians.models import musicians
-from src.bands.controller import make_band,update_band,get_my_band
+from src.bands.controller import make_band,update_band,get_my_band,create_invite,accept_invite
 bands_router=APIRouter(prefix="/bands")
 
 @bands_router.post("/create",response_model=band_response,status_code=status.HTTP_201_CREATED)
@@ -21,3 +21,12 @@ def my_band(user: musicians = Depends(authenticated_musician), db: Session = Dep
 @bands_router.put("/{band_id}", response_model=band_response)
 def edit_band(band_id: int,band_name: str | None = Form(None),description: str | None = Form(None),genre: str | None = Form(None),file: UploadFile | None = File(None),user: musicians = Depends(authenticated_musician),db: Session = Depends(get_db)):
      return update_band(band_id, band_name, description, genre, file, user, db)
+
+
+@bands_router.post("/invite/{musician_id}",response_model=invite_response,status_code=status.HTTP_201_CREATED)
+def send_invite(musician_id:int,user:musicians=Depends(authenticated_musician),db:Session=Depends(get_db)):
+    return create_invite(musician_id,user,db)
+
+@bands_router.put("/invite/{invite_id}/accept",response_model=band_response)
+def accept(invite_id:int,user:musicians=Depends(authenticated_musician),db:Session=Depends(get_db)):
+    return accept_invite(invite_id,user,db)
