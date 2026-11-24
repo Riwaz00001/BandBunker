@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from src.utils.db import Base
-from sqlalchemy import ForeignKey, Column, Integer, String
+from sqlalchemy import ForeignKey, Column, Integer, String, DateTime, func
 class bands(Base):
     __tablename__="bands"
     band_id=Column(Integer,primary_key=True)
@@ -15,3 +15,10 @@ class band_members(Base):
     band_id=Column(Integer,ForeignKey("bands.band_id",ondelete="CASCADE"),primary_key=True)
     musician_id=Column(Integer,ForeignKey("musicians.musician_id",ondelete="CASCADE"),primary_key=True)
     role=Column(String,nullable=False,default="member")
+
+class band_invites(Base):
+    __tablename__="band_invites"
+    invite_id=Column(Integer,primary_key=True)
+    band_id=Column(Integer,ForeignKey("bands.band_id",ondelete="CASCADE"),nullable=False,index=True)
+    musician_id=Column(Integer,ForeignKey("musicians.musician_id",ondelete="CASCADE"),nullable=False,index=True)
+    created_at=Column(DateTime(timezone=True),server_default=func.now())

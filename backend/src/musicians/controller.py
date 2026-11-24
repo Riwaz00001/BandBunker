@@ -40,7 +40,7 @@ def login_musician(user:login_info,db:Session=Depends(get_db)):
 
     exp_time=datetime.now()+timedelta(days=settings.EXP_TIME)
     token=jwt.encode({"user_id":correct_user.musician_id,"exp_time":exp_time.timestamp()},settings.SECRET_KEY,settings.ALGORITHM)
-    return {"token":token}
+    return {"token":token, "musician_id": correct_user.musician_id}
 
 
 def to_out(p: posts,pic_path:str|None) -> dict:

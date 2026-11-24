@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'bands_page.dart';
 import 'rooms_page.dart';
 import 'myprofile_view.dart';
+import 'invites_page.dart';
+import 'band_profile_page.dart';
+import 'profile_page.dart';
+import 'package:frontend/services/token_storage.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
