@@ -92,3 +92,41 @@ class Invite {
     );
   }
 }
+
+class BandPost {
+  final int postId;
+  final int bandId;
+  final String? caption;
+  final String mediaType;
+  final String mediaUrl;
+  final DateTime createdAt;
+
+  const BandPost({
+    required this.postId,
+    required this.bandId,
+    this.caption,
+    required this.mediaType,
+    required this.mediaUrl,
+    required this.createdAt,
+  });
+
+  factory BandPost.fromJson(Map<String, dynamic> json) {
+    final created = json['created_at'] as String?;
+    return BandPost(
+      postId: json['post_id'] as int? ?? 0,
+      bandId: json['band_id'] as int? ?? 0,
+      caption: json['caption'] as String?,
+      mediaType: json['media_type'] as String? ?? '',
+      mediaUrl: json['media_url'] as String? ?? '',
+      createdAt: created != null ? DateTime.parse(created) : DateTime.now(),
+    );
+  }
+
+  String get formattedDate {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${createdAt.day} ${months[createdAt.month - 1]}';
+  }
+}

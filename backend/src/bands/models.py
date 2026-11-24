@@ -22,3 +22,12 @@ class band_invites(Base):
     band_id=Column(Integer,ForeignKey("bands.band_id",ondelete="CASCADE"),nullable=False,index=True)
     musician_id=Column(Integer,ForeignKey("musicians.musician_id",ondelete="CASCADE"),nullable=False,index=True)
     created_at=Column(DateTime(timezone=True),server_default=func.now())
+
+class band_post(Base):
+    __tablename__="band_posts"
+    post_id=Column(Integer,primary_key=True)
+    band_id=Column(Integer,ForeignKey("bands.band_id",ondelete="CASCADE"),nullable=False,index=True)
+    caption=Column(String,nullable=True)
+    file_path=Column(String,nullable=False)
+    media_type=Column(String,nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

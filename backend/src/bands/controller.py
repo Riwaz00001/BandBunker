@@ -2,12 +2,21 @@ from fastapi import File,UploadFile,HTTPException,status
 from sqlalchemy.orm import Session
 from supabase import Client ,create_client
 from src.utils.settings import settings
-from src.bands.models import bands,band_members,band_invites
+from src.bands.models import bands,band_members,band_invites,band_post
 from src.musicians.models import musicians,profile_info
 import uuid 
 supabase: Client=create_client(settings.supabase_url,settings.supabase_key)
 PIC_TYPES={"image/jpeg","image/png","image/webp"}
 MAX_PIC=5*1024*1024
+
+POST_ALLOWED = {
+    "image/jpeg": "image",
+    "image/png": "image",
+    "image/webp": "image",
+    "video/mp4": "video",
+    "video/quicktime": "video",
+}
+POST_MAX_SIZE = 50 * 1024 * 1024
 
 def pic_url(path:str|None):
     return supabase.storage.from_(settings.bucket).get_public_url(path) if path else None
@@ -232,3 +241,61 @@ def update_band(band_id: int,band_name: str | None,description: str | None,genre
             print("cleanup error:", e)
 
     return band_out(band)
+
+
+def band_post_out(p: band_post) -> dict:
+    return {
+        "post_id": p.post_id,
+        "band_id": p.band_id,
+        "caption": p.caption,
+        "media_type": p.media_type,
+        "media_url": supabase.storage.from_(settings.bucket).get_public_url(p.file_path),
+        "created_at": p.created_at,
+    }
+
+
+def create_band_post(band_id: int, caption: str, file: UploadFile, user: musicians, db: Session):
+    band = db.get(bands, band_id)
+    if not band:
+        raise HTTPException(404, "Band not found")
+    if band.owner_id != user.musician_id:
+        raise HTTPException(403, "Only the band owner can add posts")
+
+    media_type = POST_ALLOWED.get(file.content_type)
+    if not media_type:
+        raise HTTPException(400, "Unsupported File")
+    content = file.file.read()
+    if len(content) > POST_MAX_SIZE:
+        raise HTTPException(413, "File too large")
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "bin"
+    file_path = f"bands/posts/{uuid.uuid4()}.{ext}"
+
+    try:
+        supabase.storage.from_(settings.bucket).upload(path=file_path, file=content, file_options={"content-type": file.content_type})
+    except Exception as e:
+        raise HTTPException(502, "Upload Failed")
+
+    try:
+        post = band_post(band_id=band_id, caption=caption, file_path=file_path, media_type=media_type)
+        db.add(post)
+        db.commit()
+        db.refresh(post)
+    except Exception as e:
+        db.rollback()
+        supabase.storage.from_(settings.bucket).remove([file_path])
+        raise HTTPException(500, "Could not save post")
+
+    return band_post_out(post)
+
+
+def get_band_posts(band_id: int, db: Session):
+    band = db.get(bands, band_id)
+    if not band:
+        raise HTTPException(404, "Band not found")
+    rows = (
+        db.query(band_post)
+        .filter(band_post.band_id == band_id)
+        .order_by(band_post.created_at.desc())
+        .all()
+    )
+    return [band_post_out(p) for p in rows]

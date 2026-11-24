@@ -144,6 +144,37 @@ class BandsClient {
     }
   }
 
+  Future<BandPost> createBandPost({
+    required int bandId,
+    required String caption,
+    required File file,
+  }) async {
+    try {
+      final fileName = file.path.split('/').last;
+      final formData = FormData.fromMap({
+        'caption': caption,
+        'file': await MultipartFile.fromFile(file.path, filename: fileName),
+      });
+      final response = await _dio.post(
+        '/bands/$bandId/posts',
+        data: formData,
+      );
+      return BandPost.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<BandPost>> getBandPosts(int bandId) async {
+    try {
+      final response = await _dio.get('/bands/$bandId/posts');
+      final list = response.data as List;
+      return list.map((e) => BandPost.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   Future<List<Band>> getMyBands() async {
     try {
       final response = await _dio.get('/bands/mine');

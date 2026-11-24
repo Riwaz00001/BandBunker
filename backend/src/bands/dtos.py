@@ -26,3 +26,12 @@ class invite_response(BaseModel):
     musician_id: int
     created_at: datetime
 
+
+class band_post_response(BaseModel):
+    post_id: int
+    band_id: int
+    caption: str | None
+    media_type: str
+    media_url: str
+    created_at: datetime
+

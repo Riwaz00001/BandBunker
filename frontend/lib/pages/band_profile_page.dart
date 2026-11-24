@@ -6,6 +6,7 @@ import 'package:frontend/services/token_storage.dart';
 import 'package:frontend/widgets/member_tile.dart';
 import 'package:frontend/pages/profile_page.dart';
 import 'package:frontend/pages/edit_band.dart';
+import 'package:frontend/pages/bands_posts.dart';
 
 class BandProfilePage extends StatefulWidget {
   final int bandId;
@@ -27,6 +28,7 @@ class _BandProfilePageState extends State<BandProfilePage> {
 
   Band? _band;
   BandMembersResponse? _membersResponse;
+  List<BandPost> _posts = [];
   bool _loading = true;
   bool _isOwner = false;
 
@@ -42,10 +44,12 @@ class _BandProfilePageState extends State<BandProfilePage> {
       final results = await Future.wait([
         BandsClient.instance.getBand(widget.bandId),
         BandsClient.instance.getBandMembers(widget.bandId),
+        BandsClient.instance.getBandPosts(widget.bandId),
       ]);
       if (mounted) {
         final band = results[0] as Band;
         final membersResponse = results[1] as BandMembersResponse;
+        final posts = results[2] as List<BandPost>;
         
         // Check if current user is the band owner
         final myId = await TokenStorage.getMusicianId();
@@ -54,6 +58,7 @@ class _BandProfilePageState extends State<BandProfilePage> {
         setState(() {
           _band = band;
           _membersResponse = membersResponse;
+          _posts = posts;
           _isOwner = isOwner;
           _loading = false;
         });
@@ -74,6 +79,16 @@ class _BandProfilePageState extends State<BandProfilePage> {
     );
     if (result != null && mounted) {
       // Refresh data if band was updated
+      _loadData();
+    }
+  }
+
+  Future<void> _navigateToAddPost() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => BandsPostsPage(bandId: widget.bandId)),
+    );
+    if (result == true && mounted) {
       _loadData();
     }
   }
@@ -247,6 +262,132 @@ class _BandProfilePageState extends State<BandProfilePage> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: MemberTile(member: members[index]),
+                    );
+                  },
+                ),
+
+              // Add Post button (owner only)
+              if (_isOwner)
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton.icon(
+                    onPressed: _navigateToAddPost,
+                    icon: const Icon(Icons.add_circle_outline, size: 20),
+                    label: const Text(
+                      'Add Post',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: orange,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 22),
+
+              // Band Posts
+              const Row(
+                children: [
+                  Icon(Icons.post_add, color: orange),
+                  SizedBox(width: 9),
+                  Text(
+                    'Band Posts',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              if (_posts.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'No posts yet',
+                      style: TextStyle(color: secondaryText, fontSize: 14),
+                    ),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _posts.length,
+                  itemBuilder: (context, index) {
+                    final post = _posts[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (post.mediaType == 'image')
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  post.mediaUrl,
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            else
+                              Container(
+                                width: double.infinity,
+                                height: 200,
+                                color: const Color(0xFF303039),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.video_library,
+                                    color: Colors.white70,
+                                    size: 48,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 10),
+                            if (post.caption != null && post.caption!.isNotEmpty)
+                              Text(
+                                post.caption!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  height: 1.4,
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time, color: secondaryText, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  post.formattedDate,
+                                  style: const TextStyle(
+                                    color: secondaryText,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),

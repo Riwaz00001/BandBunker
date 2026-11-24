@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends,status,File,UploadFile,Form
 from sqlalchemy.orm import Session
-from src.bands.dtos import band_response,band_members_response,invite_response
+from src.bands.dtos import band_response,band_members_response,invite_response,band_post_response
 from src.bands.models import bands,band_members,band_invites
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
 from src.musicians.models import musicians
-from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite
+from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite,create_band_post,get_band_posts
 bands_router=APIRouter(prefix="/bands")
 
 # Fixed paths MUST come before /{band_id}
@@ -48,5 +48,15 @@ def my_band(user: musicians = Depends(authenticated_musician), db: Session = Dep
 
 
 @bands_router.put("/{band_id}", response_model=band_response)
-def edit_band(band_id: int,band_name: str | None = Form(None),description: str | None = Form(None),genre: str | None = Form(None),file: UploadFile | None = File(None),user: musicians = Depends(authenticated_musician),db: Session = Depends(get_db)):
+def edit_band(band_id: int,band_name: str | None = Form(None),description: str | None = Form(None),genre: str | None = Form(None),file: UploadFile | None = File(None),user: musicians = Depends(authenticated_musician),db:Session=Depends(get_db)):
      return update_band(band_id, band_name, description, genre, file, user, db)
+
+
+@bands_router.post("/{band_id}/posts", response_model=band_post_response, status_code=status.HTTP_201_CREATED)
+def add_band_post(band_id: int, caption: str = Form(""), file: UploadFile = File(...), user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return create_band_post(band_id, caption, file, user, db)
+
+
+@bands_router.get("/{band_id}/posts", response_model=list[band_post_response])
+def list_band_posts(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
+    return get_band_posts(band_id, db)
