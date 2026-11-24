@@ -147,3 +147,12 @@ def create_invite(musician_id: int, user: musicians, db: Session):
         raise HTTPException(500, "Could not send invite")
     return invite_out(inv, band)
 
+def _my_invite(invite_id: int, user: musicians, db: Session) -> band_invites:
+    inv = db.get(band_invites, invite_id)
+    if not inv or inv.musician_id != user.musician_id:
+        raise HTTPException(404, "Invite not found")
+    return inv
+
+def accept_invite(invite_id:int,user:musicians,db:Session):
+    inv=_my_invite(invite_id,user,db)
+    
