@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../clients/musician_client.dart';
 import '../helpers/alert_helper.dart';
@@ -22,7 +23,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
-  final TextEditingController searchController = TextEditingController();
+  final TextEditingController searchController =
+  TextEditingController();
 
   final List<Post> posts = [];
   bool _loading = true;
@@ -34,10 +36,14 @@ class _DiscoverPageState extends State<DiscoverPage> {
     super.dispose();
   }
 
+  // Load all posts
   Future<void> _loadPosts() async {
     setState(() => _loading = true);
+
     try {
-      final allPosts = await MusicianClient.instance.getAllPosts();
+      final allPosts =
+      await MusicianClient.instance.getAllPosts();
+
       if (mounted) {
         setState(() {
           posts
@@ -54,13 +60,24 @@ class _DiscoverPageState extends State<DiscoverPage> {
     }
   }
 
+  // Load current user's profile
   Future<void> _loadProfile() async {
     try {
-      final profile = await MusicianClient.instance.getProfile();
-      if (profile.profilePicUrl != null && profile.profilePicUrl!.isNotEmpty && mounted) {
-        await precacheImage(NetworkImage(profile.profilePicUrl!), context);
+      final profile =
+      await MusicianClient.instance.getProfile();
+
+      if (profile.profilePicUrl != null &&
+          profile.profilePicUrl!.isNotEmpty &&
+          mounted) {
+        await precacheImage(
+          NetworkImage(profile.profilePicUrl!),
+          context,
+        );
       }
-      if (mounted) setState(() => _profile = profile);
+
+      if (mounted) {
+        setState(() => _profile = profile);
+      }
     } catch (_) {}
   }
 
@@ -71,12 +88,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
     _loadProfile();
   }
 
-  // Top Header
+  // Compact Top Header
   Widget buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: 22,
-        vertical: 15,
+        horizontal: 20,
+        vertical: 8,
       ),
       child: Row(
         children: [
@@ -84,13 +101,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(
               'assets/images/band_bunker_logo.jpeg',
-              width: 55,
-              height: 55,
+              width: 44,
+              height: 44,
               fit: BoxFit.contain,
             ),
           ),
 
-          const SizedBox(width: 15),
+          const SizedBox(width: 11),
 
           const Expanded(
             child: Column(
@@ -100,16 +117,16 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   'BAND BUNKER',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 23,
+                    fontSize: 19,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 3),
+                SizedBox(height: 2),
                 Text(
                   'DISCOVER',
                   style: TextStyle(
                     color: orange,
-                    fontSize: 15,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -117,48 +134,52 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
           ),
 
-           GestureDetector(
-             onTap: widget.onProfileTap,
-             child: Container(
-               width: 48,
-               height: 48,
-               decoration: BoxDecoration(
-                 shape: BoxShape.circle,
-                 border: Border.all(
-                   color: orange,
-                   width: 2,
-                 ),
-               ),
-               child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
-                   ? ClipOval(
-                       child: Image.network(
-                         _profile!.profilePicUrl!,
-                         width: 44,
-                         height: 44,
-                         fit: BoxFit.cover,
-                         errorBuilder: (_, __, ___) => const Icon(
-                           Icons.person_outline,
-                           color: Colors.white,
-                           size: 28,
-                         ),
-                       ),
-                     )
-                   : const Icon(
-                       Icons.person_outline,
-                       color: Colors.white,
-                       size: 28,
-                     ),
-             ),
-           ),
+          GestureDetector(
+            onTap: widget.onProfileTap,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: orange,
+                  width: 2,
+                ),
+              ),
+              child: (
+                  _profile?.profilePicUrl != null &&
+                      _profile!.profilePicUrl!.isNotEmpty
+              )
+                  ? ClipOval(
+                child: Image.network(
+                  _profile!.profilePicUrl!,
+                  width: 38,
+                  height: 38,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                  const Icon(
+                    Icons.person_outline,
+                    color: Colors.white,
+                    size: 25,
+                  ),
+                ),
+              )
+                  : const Icon(
+                Icons.person_outline,
+                color: Colors.white,
+                size: 25,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // Discover Heading
+  // Compact Discover Heading
   Widget buildDiscoverHeading() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Row(
         children: [
           const Expanded(
@@ -166,7 +187,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
               'Discover Musicians',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 25,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -174,8 +195,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
           Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 9,
+              horizontal: 11,
+              vertical: 6,
             ),
             decoration: BoxDecoration(
               color: cardColor,
@@ -185,7 +206,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
               'ACTIVE',
               style: TextStyle(
                 color: Color(0xFFFFB08F),
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -195,7 +216,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  // Search Bar
+  // Compact Search Bar
   Widget buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -203,18 +224,18 @@ class _DiscoverPageState extends State<DiscoverPage> {
         controller: searchController,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 15,
+          fontSize: 14,
         ),
         decoration: InputDecoration(
           hintText: 'Search by Name and Roles.',
           hintStyle: const TextStyle(
             color: secondaryText,
-            fontSize: 14,
+            fontSize: 13,
           ),
           prefixIcon: const Icon(
             Icons.search,
             color: secondaryText,
-            size: 27,
+            size: 23,
           ),
           suffixIcon: IconButton(
             onPressed: () {
@@ -223,21 +244,24 @@ class _DiscoverPageState extends State<DiscoverPage> {
             icon: const Icon(
               Icons.tune,
               color: secondaryText,
+              size: 21,
             ),
           ),
           filled: true,
           fillColor: cardColor,
+          isDense: true,
           contentPadding: const EdgeInsets.symmetric(
-            vertical: 20,
+            vertical: 12,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
         ),
       ),
     );
   }
+
   // Add Post Button
   Widget buildAddPostButton() {
     return Padding(
@@ -249,21 +273,23 @@ class _DiscoverPageState extends State<DiscoverPage> {
             final created = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
-                builder: (context) => const ArtistPostsPage(),
+                builder: (context) =>
+                const ArtistPostsPage(),
               ),
             );
+
             if (created == true && mounted) {
               _loadPosts();
             }
           },
           icon: const Icon(
             Icons.add,
-            size: 21,
+            size: 20,
           ),
           label: const Text(
             'Add Post',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -271,11 +297,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
             backgroundColor: orange,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 12,
+              horizontal: 16,
+              vertical: 9,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(11),
             ),
           ),
         ),
@@ -327,42 +353,81 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        buildHeader(),
+    return RefreshIndicator(
+      onRefresh: _loadPosts,
+      color: orange,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
 
-        const SizedBox(height: 18),
+          // Header scrolls away with posts
+          SliverToBoxAdapter(
+            child: buildHeader(),
+          ),
 
-        buildDiscoverHeading(),
+          // Discover heading
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                buildDiscoverHeading(),
+                const SizedBox(height: 14),
+              ],
+            ),
+          ),
 
-        const SizedBox(height: 22),
+          // Search bar
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                buildSearchBar(),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
 
-        buildSearchBar(),
+          // Add Post button
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                buildAddPostButton(),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
 
-        const SizedBox(height: 12),
-
-        buildAddPostButton(),
-
-        const SizedBox(height: 18),
-
-        Expanded(
-          child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: orange),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadPosts,
-                  child: posts.isEmpty
-                      ? buildEmptyState()
-                      : ListView.builder(
-                          itemCount: posts.length,
-                          itemBuilder: (context, index) {
-                            return PostCard(post: posts[index]);
-                          },
-                        ),
+          // Loading indicator
+          if (_loading)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: orange,
                 ),
-        ),
-      ],
+              ),
+            )
+
+          // Empty state
+          else if (posts.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: buildEmptyState(),
+            )
+
+          // Posts
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                  return PostCard(
+                    post: posts[index],
+                  );
+                },
+                childCount: posts.length,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -11,8 +11,8 @@ class BandsClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -126,6 +126,70 @@ class BandsClient {
     }
   }
 
+  Future<Band> getBand(int bandId) async {
+    try {
+      final response = await _dio.get('/bands/$bandId');
+      return Band.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<BandMembersResponse> getBandMembers(int bandId) async {
+    try {
+      final response = await _dio.get('/bands/$bandId/members');
+      return BandMembersResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<Band>> getMyBands() async {
+    try {
+      final response = await _dio.get('/bands/mine');
+      final list = response.data as List;
+      return list.map((e) => Band.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<Invite>> getInvites() async {
+    try {
+      final response = await _dio.get('/bands/invites');
+      final list = response.data as List;
+      return list.map((e) => Invite.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Band> sendInvite(int musicianId) async {
+    try {
+      final response = await _dio.post('/bands/invite/$musicianId');
+      return Band.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Band> acceptInvite(int inviteId) async {
+    try {
+      final response = await _dio.put('/bands/invites/$inviteId/accept');
+      return Band.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> rejectInvite(int inviteId) async {
+    try {
+      await _dio.delete('/bands/invites/$inviteId');
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   ApiException _mapDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
@@ -143,6 +207,13 @@ class BandsClient {
           return const ApiException(
             'Please log in again to create a band.',
             statusCode: 401,
+          );
+        }
+
+        if (statusCode == 405) {
+          return ApiException(
+            detail is String ? detail : 'Method not allowed. Backend may need restart.',
+            statusCode: statusCode,
           );
         }
 
@@ -175,7 +246,7 @@ class BandsClient {
         }
 
         return ApiException(
-          'Unable to create band. Please try again.',
+          detail is String ? detail : 'Unable to complete request. Please try again.',
           statusCode: statusCode,
         );
 

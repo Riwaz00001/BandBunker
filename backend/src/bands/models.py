@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from src.utils.db import Base
-from sqlalchemy import ForeignKey, Column, Integer, String,UniqueConstraint
+from sqlalchemy import ForeignKey, Column, Integer, String, DateTime, func
 class bands(Base):
     __tablename__="bands"
     band_id=Column(Integer,primary_key=True)
@@ -18,7 +18,7 @@ class band_members(Base):
 
 class band_invites(Base):
     __tablename__="band_invites"
-    __table_args__ = (UniqueConstraint("band_id", "musician_id", name="uq_invite_band_musician"),)
     invite_id=Column(Integer,primary_key=True)
     band_id=Column(Integer,ForeignKey("bands.band_id",ondelete="CASCADE"),nullable=False,index=True)
-    musician_id=Column(Integer,nullable=False)
+    musician_id=Column(Integer,ForeignKey("musicians.musician_id",ondelete="CASCADE"),nullable=False,index=True)
+    created_at=Column(DateTime(timezone=True),server_default=func.now())

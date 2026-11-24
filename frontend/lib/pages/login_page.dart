@@ -79,14 +79,15 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
-        final token = await MusicianClient.instance.login(
+        final result = await MusicianClient.instance.login(
           LoginRequest(
             email: emailController.text.trim(),
             password: passwordController.text,
           ),
         );
 
-        await TokenStorage.saveMusicianToken(token);
+        await TokenStorage.saveMusicianToken(result['token'] as String);
+        // musician_id is already saved in the client
 
         if (mounted) {
           Navigator.pushReplacement(
