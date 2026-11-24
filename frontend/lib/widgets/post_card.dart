@@ -2,6 +2,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../models/musician_models.dart';
+import '../pages/others_profile_view.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -80,9 +81,10 @@ class _PostCardState extends State<PostCard> {
                   children: [
                     TextButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('View profile coming soon.'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OthersProfileView(),
                           ),
                         );
                       },
