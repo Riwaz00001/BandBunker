@@ -211,6 +211,8 @@ class BandsClient {
       throw _mapDioError(e);
     }
   }
+
+  Future<List<BandPost>> getBandPosts(int bandId) async {
     try {
       final response = await _dio.get('/bands/$bandId/posts');
       final list = response.data as List;

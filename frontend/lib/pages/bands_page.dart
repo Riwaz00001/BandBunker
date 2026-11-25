@@ -521,11 +521,6 @@ class _BandsPageState extends State<BandsPage> {
         const SizedBox(height: 18),
 
         Expanded(
-          child: ListView.builder(
-            itemCount: _bandPosts.length,
-            itemBuilder: (context, index) => BandPostCard(post: _bandPosts[index]),
-          ),
-        ),
           child: RefreshIndicator(
             onRefresh: _loadMyBands,
             color: orange,
@@ -543,13 +538,14 @@ class _BandsPageState extends State<BandsPage> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _ownedBand != null ? 1 : 0,
+                        itemCount: _bandPosts.length + (_ownedBand != null ? 1 : 0),
                         itemBuilder: (context, index) {
-                          final band = _ownedBand!;
-                          return BandCard(
-                            band: band,
-                            isOwner: true,
-                          );
+                          if (_ownedBand != null && index == 0) {
+                            final band = _ownedBand!;
+                            return BandCard(band: band, isOwner: true);
+                          }
+                          final postIndex = _ownedBand != null ? index - 1 : index;
+                          return BandPostCard(post: _bandPosts[postIndex]);
                         },
                       ),
           ),
