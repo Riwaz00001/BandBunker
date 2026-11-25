@@ -20,8 +20,8 @@ class MusicianClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -59,10 +59,24 @@ class MusicianClient {
     }
   }
 
-  Future<String> login(LoginRequest request) async {
+  Future<Map<String, dynamic>> login(LoginRequest request) async {
     try {
       final response = await _dio.post('/musician/login', data: request.toJson());
-      return (response.data as Map<String, dynamic>)['token'] as String;
+      final data = response.data as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final musicianIdRaw = data['musician_id'];
+      final musicianId = musicianIdRaw is int ? musicianIdRaw : int.tryParse(musicianIdRaw.toString()) ?? 0;
+      await TokenStorage.saveMusicianId(musicianId);
+      return {'token': token, 'musician_id': musicianId};
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Profile> getProfileById(int musicianId) async {
+    try {
+      final response = await _dio.get('/musician/profile/$musicianId');
+      return Profile.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapDioError(e);
     }

@@ -14,6 +14,10 @@ class login_info(BaseModel):
     email:str
     password:str
 
+class login_response(BaseModel):
+    token: str
+    musician_id: int
+
 class post_response(BaseModel):
     musician_id:int
     musician_name:str
@@ -30,13 +34,6 @@ class profile_response(BaseModel):
     bio:str|None
     profile_pic_url:str |None
 
-
-class profile_response(BaseModel):
-    name:str
-    email:str
-    role:str
-    bio:str|None
-    profile_pic_url:str |None
 
 class public_profile_response(BaseModel):
     name: str

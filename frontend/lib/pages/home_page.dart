@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'bands_page.dart';
 import 'rooms_page.dart';
 import 'myprofile_view.dart';
+import 'invites_page.dart';
+import 'band_profile_page.dart';
+import 'profile_page.dart';
+import 'package:frontend/clients/musician_client.dart';
+import 'package:frontend/services/token_storage.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +23,27 @@ class _HomePageState extends State<HomePage> {
   static const Color secondaryText = Color(0xFFBDB8C9);
 
   int selectedIndex = 0;
+  String? _profilePicUrl;
+  bool _profileLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfilePic();
+  }
+
+  Future<void> _loadProfilePic() async {
+    setState(() => _profileLoading = true);
+    try {
+      final profile = await MusicianClient.instance.getProfile();
+      if (mounted) {
+        setState(() => _profilePicUrl = profile.profilePicUrl);
+      }
+    } catch (_) {}
+    finally {
+      if (mounted) setState(() => _profileLoading = false);
+    }
+  }
 
   late final List<Widget> _pages = [
     buildHomeContent(),
@@ -132,10 +158,36 @@ class _HomePageState extends State<HomePage> {
                       width: 2,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Colors.white,
-                    size: 28,
+                  child: ClipOval(
+                    child: _profilePicUrl != null &&
+                            _profilePicUrl!.isNotEmpty
+                        ? Image.network(
+                            _profilePicUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.person_outline,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                          )
+                        : _profileLoading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_outline,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                   ),
                 ),
               ),
