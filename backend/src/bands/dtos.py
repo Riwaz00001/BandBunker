@@ -36,6 +36,8 @@ class join_request_response(BaseModel):
     musician_name: str
     musician_profile_pic_url: str | None
     created_at: datetime
+
+class band_post_response(BaseModel):
     post_id: int
     band_id: int
     band_name: str | None = None
@@ -44,4 +46,3 @@ class join_request_response(BaseModel):
     media_type: str
     media_url: str
     created_at: datetime
-

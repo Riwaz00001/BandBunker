@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends,status,File,UploadFile,Form
 from sqlalchemy.orm import Session
-from src.bands.dtos import band_response,band_members_response,invite_response,band_post_response
+from src.bands.dtos import band_response,band_members_response,invite_response,band_post_response,join_request_response
 from src.bands.models import bands,band_members,band_invites
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
@@ -75,5 +75,6 @@ def accept_join_req(request_id: int, user: musicians = Depends(authenticated_mus
 @bands_router.delete("/join-requests/{request_id}", response_model=dict)
 def reject_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
     return reject_join_request(request_id, user, db)
+@bands_router.get("/{band_id}/posts", response_model=list[band_post_response])
 def list_band_posts(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
     return get_band_posts(band_id, db)

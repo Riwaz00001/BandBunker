@@ -287,6 +287,9 @@ def reject_join_request(request_id: int, user: musicians, db: Session):
     db.delete(jr)
     db.commit()
     return {"ok": True}
+
+
+def update_band(band_id: int,band_name: str | None,description: str | None,genre: str | None,file: UploadFile | None,user: musicians,db: Session,):
     band = db.get(bands, band_id)
     if not band:
         raise HTTPException(404, "Band not found")
@@ -320,7 +323,6 @@ def reject_join_request(request_id: int, user: musicians, db: Session):
         print("db error:", e)
         raise HTTPException(500, "Could not update band")
 
-    # delete the replaced picture only after the commit succeeded
     if new_path and old_path:
         try:
             supabase.storage.from_(settings.bucket).remove([old_path])
