@@ -246,10 +246,14 @@ def update_band(band_id: int,band_name: str | None,description: str | None,genre
     return band_out(band)
 
 
-def band_post_out(p: band_post) -> dict:
+def band_post_out(p: band_post, band: bands | None = None) -> dict:
+    if band is None:
+        band = None
     return {
         "post_id": p.post_id,
         "band_id": p.band_id,
+        "band_name": band.band_name if band else None,
+        "profile_pic_url": pic_url(band.profile_pic_path) if band else None,
         "caption": p.caption,
         "media_type": p.media_type,
         "media_url": supabase.storage.from_(settings.bucket).get_public_url(p.file_path),
@@ -292,7 +296,7 @@ def create_band_post(band_id: int, caption: str, file: UploadFile, user: musicia
         supabase.storage.from_(settings.bucket).remove([file_path])
         raise HTTPException(500, "Could not save post")
 
-    return band_post_out(post)
+    return band_post_out(post, band)
 
 
 def get_band_posts(band_id: int, db: Session):
@@ -305,4 +309,14 @@ def get_band_posts(band_id: int, db: Session):
         .order_by(band_post.created_at.desc())
         .all()
     )
-    return [band_post_out(p) for p in rows]
+    return [band_post_out(p, band) for p in rows]
+
+
+def get_all_band_posts(db: Session):
+    rows = (
+        db.query(band_post, bands)
+        .join(bands, bands.band_id == band_post.band_id)
+        .order_by(band_post.created_at.desc())
+        .all()
+    )
+    return [band_post_out(p, b) for p, b in rows]

@@ -5,7 +5,7 @@ from src.bands.models import bands,band_members,band_invites
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
 from src.musicians.models import musicians
-from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite,create_band_post,get_band_posts
+from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite,create_band_post,get_band_posts,get_all_band_posts
 bands_router=APIRouter(prefix="/bands")
 
 # Fixed paths MUST come before /{band_id}
@@ -57,6 +57,8 @@ def add_band_post(band_id: int, caption: str = Form(""), file: UploadFile = File
     return create_band_post(band_id, caption, file, user, db)
 
 
-@bands_router.get("/{band_id}/posts", response_model=list[band_post_response])
+@bands_router.get("/posts/all", response_model=list[band_post_response])
+def all_band_posts(db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
+    return get_all_band_posts(db)
 def list_band_posts(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
     return get_band_posts(band_id, db)
