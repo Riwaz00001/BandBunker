@@ -7,7 +7,7 @@ from src.musicians.models import musicians,profile_info
 import uuid 
 supabase: Client=create_client(settings.supabase_url,settings.supabase_key)
 PIC_TYPES={"image/jpeg","image/png","image/webp"}
-MAX_PIC=5*1024*1024
+MAX_PIC=1*1024*1024
 
 POST_ALLOWED = {
     "image/jpeg": "image",
@@ -16,7 +16,10 @@ POST_ALLOWED = {
     "video/mp4": "video",
     "video/quicktime": "video",
 }
-POST_MAX_SIZE = 50 * 1024 * 1024
+POST_MAX_IMAGE_SIZE = 2 * 1024 * 1024
+POST_MAX_VIDEO_SIZE = 20 * 1024 * 1024
+
+UPLOAD_FILE_OPTIONS = {"cache-control": "31536000"}
 
 def pic_url(path:str|None):
     return supabase.storage.from_(settings.bucket).get_public_url(path) if path else None
@@ -26,13 +29,13 @@ def save_pic(file:UploadFile)->str:
         raise HTTPException(400,"Must be jpg,png or webp")
     content=file.file.read()
     if len(content)>MAX_PIC:
-        raise HTTPException(413,"Image to large")
+        raise HTTPException(413,"Profile picture too large (max 1 MB).")
     ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "jpg"
     path = f"bands/{uuid.uuid4()}.{ext}"
     try:
         supabase.storage.from_(settings.bucket).upload(
             path=path, file=content,
-            file_options={"content-type": file.content_type},
+            file_options={"content-type": file.content_type, **UPLOAD_FILE_OPTIONS},
         )
     except Exception as e:
         print("storage error:", e)
@@ -265,13 +268,17 @@ def create_band_post(band_id: int, caption: str, file: UploadFile, user: musicia
     if not media_type:
         raise HTTPException(400, "Unsupported File")
     content = file.file.read()
-    if len(content) > POST_MAX_SIZE:
-        raise HTTPException(413, "File too large")
+    if media_type == "image":
+        if len(content) > POST_MAX_IMAGE_SIZE:
+            raise HTTPException(413, "Image too large (max 2 MB).")
+    else:
+        if len(content) > POST_MAX_VIDEO_SIZE:
+            raise HTTPException(413, "Video too large (max 20 MB).")
     ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "bin"
     file_path = f"bands/posts/{uuid.uuid4()}.{ext}"
 
     try:
-        supabase.storage.from_(settings.bucket).upload(path=file_path, file=content, file_options={"content-type": file.content_type})
+        supabase.storage.from_(settings.bucket).upload(path=file_path, file=content, file_options={"content-type": file.content_type, **UPLOAD_FILE_OPTIONS})
     except Exception as e:
         raise HTTPException(502, "Upload Failed")
 

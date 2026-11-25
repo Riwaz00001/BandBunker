@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../clients/musician_client.dart';
@@ -227,19 +228,17 @@ class _MyProfileViewState extends State<MyProfileView> {
   Widget _buildAvatar() {
     if (_profilePicUrl != null && _profilePicUrl!.isNotEmpty) {
       return ClipOval(
-        child: Image.network(
-          _profilePicUrl!,
+        child: CachedNetworkImage(
+          imageUrl: _profilePicUrl!,
           width: 96,
           height: 96,
           fit: BoxFit.cover,
-          key: ValueKey(_profilePicUrl),
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) => Center(
+          memCacheWidth: 256,
+          maxWidthDiskCache: 256,
+          placeholder: (context, url) => const Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          errorWidget: (context, url, stackTrace) => Center(
             child: Icon(
               Icons.broken_image,
               color: secondaryText,

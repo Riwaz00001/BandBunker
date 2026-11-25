@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -151,32 +152,52 @@ class _EditBandPageState extends State<EditBandPage> {
                 fit: BoxFit.cover,
               )
                   : widget.band.profilePicUrl != null
-                  ? Image.network(
-                widget.band.profilePicUrl!,
-                width: 125,
-                height: 125,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.groups,
-                      color: orange,
-                      size: 38,
+                  ? CachedNetworkImage(
+                    imageUrl: widget.band.profilePicUrl!,
+                    width: 125,
+                    height: 125,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 256,
+                    maxWidthDiskCache: 256,
+                    placeholder: (context, url) => const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.groups,
+                          color: orange,
+                          size: 38,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Add Photo',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Add Photo',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    errorWidget: (context, url, stackTrace) => const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.groups,
+                          color: orange,
+                          size: 38,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Add Photo',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )
+                  )
                   : const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

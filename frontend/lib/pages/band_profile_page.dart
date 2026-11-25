@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/helpers/alert_helper.dart';
@@ -163,12 +164,19 @@ class _BandProfilePageState extends State<BandProfilePage> {
                     border: Border.all(color: orange, width: 1.5),
                   ),
                   child: _band!.profilePicUrl != null
-                      ? Image.network(
-                          _band!.profilePicUrl!,
+                      ? CachedNetworkImage(
+                          imageUrl: _band!.profilePicUrl!,
                           width: 110,
                           height: 110,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
+                          memCacheWidth: 256,
+                          maxWidthDiskCache: 256,
+                          placeholder: (context, url) => const Icon(
+                            Icons.groups,
+                            color: orange,
+                            size: 55,
+                          ),
+                          errorWidget: (context, url, stackTrace) =>
                               const Icon(Icons.groups, color: orange, size: 55),
                         )
                       : const Icon(Icons.groups, color: orange, size: 55),
@@ -341,11 +349,35 @@ class _BandProfilePageState extends State<BandProfilePage> {
                             if (post.mediaType == 'image')
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  post.mediaUrl,
+                                child: CachedNetworkImage(
+                                  imageUrl: post.mediaUrl,
                                   width: double.infinity,
                                   height: 200,
                                   fit: BoxFit.cover,
+                                  memCacheWidth: 800,
+                                  maxWidthDiskCache: 1080,
+                                  placeholder: (context, url) => Container(
+                                    width: double.infinity,
+                                    height: 200,
+                                    color: const Color(0xFF303039),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: orange,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, stackTrace) =>
+                                      Container(
+                                    width: double.infinity,
+                                    height: 200,
+                                    color: const Color(0xFF303039),
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      color: secondaryText,
+                                      size: 48,
+                                    ),
+                                  ),
                                 ),
                               )
                             else

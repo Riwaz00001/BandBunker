@@ -1,4 +1,5 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../clients/musician_client.dart';
 import '../helpers/alert_helper.dart';
@@ -69,10 +70,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
       if (profile.profilePicUrl != null &&
           profile.profilePicUrl!.isNotEmpty &&
           mounted) {
-        await precacheImage(
-          NetworkImage(profile.profilePicUrl!),
-          context,
-        );
+        // CachedNetworkImage handles caching on demand; no precache needed.
       }
 
       if (mounted) {
@@ -151,12 +149,24 @@ class _DiscoverPageState extends State<DiscoverPage> {
                       _profile!.profilePicUrl!.isNotEmpty
               )
                   ? ClipOval(
-                child: Image.network(
-                  _profile!.profilePicUrl!,
+                child: CachedNetworkImage(
+                  imageUrl: _profile!.profilePicUrl!,
                   width: 38,
                   height: 38,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
+                  memCacheWidth: 256,
+                  maxWidthDiskCache: 256,
+                  placeholder: (context, url) => const SizedBox(
+                    width: 38,
+                    height: 38,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, stackTrace) =>
                   const Icon(
                     Icons.person_outline,
                     color: Colors.white,
