@@ -374,8 +374,6 @@ class _BandProfilePageState extends State<BandProfilePage> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                const Icon(Icons.access_time, color: secondaryText, size: 14),
-                                const SizedBox(width: 6),
                                 Text(
                                   post.formattedDate,
                                   style: const TextStyle(

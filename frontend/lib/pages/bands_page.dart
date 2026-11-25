@@ -6,6 +6,7 @@ import 'package:frontend/pages/band_profile_page.dart';
 import 'package:frontend/widgets/band_card.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/clients/bands_client.dart';
+import 'package:frontend/clients/musician_client.dart';
 import 'package:frontend/services/token_storage.dart';
 import 'package:frontend/helpers/alert_helper.dart';
 
@@ -31,11 +32,27 @@ class _BandsPageState extends State<BandsPage> {
   bool isLoadingBands = true;
   int? myMusicianId;
   int _inviteCount = 0;
+  String? _profilePicUrl;
+  bool _profileLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadProfilePic();
+  }
+
+  Future<void> _loadProfilePic() async {
+    setState(() => _profileLoading = true);
+    try {
+      final profile = await MusicianClient.instance.getProfile();
+      if (mounted) {
+        setState(() => _profilePicUrl = profile.profilePicUrl);
+      }
+    } catch (_) {}
+    finally {
+      if (mounted) setState(() => _profileLoading = false);
+    }
   }
 
   Future<void> _loadData() async {
@@ -184,25 +201,51 @@ class _BandsPageState extends State<BandsPage> {
                 ),
             ],
           ),
-          GestureDetector(
-            onTap: widget.onProfileTap,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: orange,
-                  width: 2,
+              GestureDetector(
+                onTap: widget.onProfileTap,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: orange,
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: _profilePicUrl != null &&
+                            _profilePicUrl!.isNotEmpty
+                        ? Image.network(
+                            _profilePicUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.person_outlined,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                          )
+                        : _profileLoading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_outlined,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                  ),
                 ),
               ),
-              child: const Icon(
-                Icons.person_outlined,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
         ],
       ),
     );
