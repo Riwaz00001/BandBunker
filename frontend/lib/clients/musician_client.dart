@@ -186,7 +186,7 @@ class MusicianClient {
         }
 
         return ApiException(
-          'Unable to complete registration. Please try again.',
+          'You have entered wrong email or password',
           statusCode: statusCode,
         );
 
