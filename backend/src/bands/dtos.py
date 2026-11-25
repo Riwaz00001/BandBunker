@@ -30,6 +30,8 @@ class invite_response(BaseModel):
 class band_post_response(BaseModel):
     post_id: int
     band_id: int
+    band_name: str | None = None
+    profile_pic_url: str | None = None
     caption: str | None
     media_type: str
     media_url: str

@@ -8,6 +8,7 @@ import 'package:frontend/widgets/member_tile.dart';
 import 'package:frontend/pages/profile_page.dart';
 import 'package:frontend/pages/edit_band.dart';
 import 'package:frontend/pages/bands_posts.dart';
+import 'package:frontend/widgets/band_post_card.dart';
 
 class BandProfilePage extends StatefulWidget {
   final int bandId;
@@ -333,93 +334,7 @@ class _BandProfilePageState extends State<BandProfilePage> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _posts.length,
-                  itemBuilder: (context, index) {
-                    final post = _posts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (post.mediaType == 'image')
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: CachedNetworkImage(
-                                  imageUrl: post.mediaUrl,
-                                  width: double.infinity,
-                                  height: 200,
-                                  fit: BoxFit.cover,
-                                  memCacheWidth: 800,
-                                  maxWidthDiskCache: 1080,
-                                  placeholder: (context, url) => Container(
-                                    width: double.infinity,
-                                    height: 200,
-                                    color: const Color(0xFF303039),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        color: orange,
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, stackTrace) =>
-                                      Container(
-                                    width: double.infinity,
-                                    height: 200,
-                                    color: const Color(0xFF303039),
-                                    child: const Icon(
-                                      Icons.broken_image,
-                                      color: secondaryText,
-                                      size: 48,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              Container(
-                                width: double.infinity,
-                                height: 200,
-                                color: const Color(0xFF303039),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.video_library,
-                                    color: Colors.white70,
-                                    size: 48,
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(height: 10),
-                            if (post.caption != null && post.caption!.isNotEmpty)
-                              Text(
-                                post.caption!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Text(
-                                  post.formattedDate,
-                                  style: const TextStyle(
-                                    color: secondaryText,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                  itemBuilder: (context, index) => BandPostCard(post: _posts[index]),
                 ),
 
               const SizedBox(height: 30),
