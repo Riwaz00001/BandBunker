@@ -202,7 +202,15 @@ class BandsClient {
     }
   }
 
-  Future<List<BandPost>> getBandPosts(int bandId) async {
+  Future<List<BandPost>> getAllBandPosts() async {
+    try {
+      final response = await _dio.get('/bands/posts/all');
+      final list = response.data as List;
+      return list.map((e) => BandPost.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
     try {
       final response = await _dio.get('/bands/$bandId/posts');
       final list = response.data as List;

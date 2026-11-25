@@ -96,6 +96,8 @@ class Invite {
 class BandPost {
   final int postId;
   final int bandId;
+  final String? bandName;
+  final String? profilePicUrl;
   final String? caption;
   final String mediaType;
   final String mediaUrl;
@@ -104,6 +106,8 @@ class BandPost {
   const BandPost({
     required this.postId,
     required this.bandId,
+    this.bandName,
+    this.profilePicUrl,
     this.caption,
     required this.mediaType,
     required this.mediaUrl,
@@ -115,6 +119,8 @@ class BandPost {
     return BandPost(
       postId: json['post_id'] as int? ?? 0,
       bandId: json['band_id'] as int? ?? 0,
+      bandName: json['band_name'] as String?,
+      profilePicUrl: json['profile_pic_url'] as String?,
       caption: json['caption'] as String?,
       mediaType: json['media_type'] as String? ?? '',
       mediaUrl: json['media_url'] as String? ?? '',
@@ -123,10 +129,7 @@ class BandPost {
   }
 
   String get formattedDate {
-    final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${createdAt.day} ${months[createdAt.month - 1]}';
   }
 }

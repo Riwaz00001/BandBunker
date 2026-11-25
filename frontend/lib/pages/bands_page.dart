@@ -5,6 +5,7 @@ import 'package:frontend/pages/create_band.dart';
 import 'package:frontend/pages/invites_page.dart';
 import 'package:frontend/pages/band_profile_page.dart';
 import 'package:frontend/widgets/band_card.dart';
+import 'package:frontend/widgets/band_post_card.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/clients/musician_client.dart';
@@ -30,6 +31,7 @@ class _BandsPageState extends State<BandsPage> {
   final TextEditingController searchController = TextEditingController();
 
   List<Band> myBands = [];
+  List<BandPost> _bandPosts = [];
   bool isLoadingBands = true;
   int? myMusicianId;
   int _inviteCount = 0;
@@ -61,7 +63,15 @@ class _BandsPageState extends State<BandsPage> {
     await Future.wait([
       _loadMyBands(),
       _loadInviteCount(),
+      _loadBandPosts(),
     ]);
+  }
+
+  Future<void> _loadBandPosts() async {
+    try {
+      final posts = await BandsClient.instance.getAllBandPosts();
+      if (mounted) setState(() => _bandPosts = posts);
+    } catch (_) {}
   }
 
   Future<void> _loadMyMusicianId() async {
@@ -511,6 +521,11 @@ class _BandsPageState extends State<BandsPage> {
         const SizedBox(height: 18),
 
         Expanded(
+          child: ListView.builder(
+            itemCount: _bandPosts.length,
+            itemBuilder: (context, index) => BandPostCard(post: _bandPosts[index]),
+          ),
+        ),
           child: RefreshIndicator(
             onRefresh: _loadMyBands,
             color: orange,
