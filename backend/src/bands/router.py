@@ -17,6 +17,18 @@ def my_bands(user: musicians = Depends(authenticated_musician), db: Session = De
 def my_invites(user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
     return get_invites(user, db)
 
+@bands_router.get("/join-requests", response_model=list[join_request_response])
+def list_join_reqs(user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return get_join_requests(user, db)
+
+@bands_router.post("/join-requests/{request_id}/accept", response_model=dict)
+def accept_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return accept_join_request(request_id, user, db)
+
+@bands_router.delete("/join-requests/{request_id}", response_model=dict)
+def reject_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return reject_join_request(request_id, user, db)
+
 @bands_router.get("/{band_id}", response_model=band_response)
 def get_band(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
     return get_band_by_id(band_id, db)
@@ -64,17 +76,6 @@ def all_band_posts(db: Session = Depends(get_db), user: musicians = Depends(auth
 def create_join_req(band_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
     return create_join_request(band_id, user, db)
 
-@bands_router.get("/join-requests", response_model=list[join_request_response])
-def list_join_reqs(user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
-    return get_join_requests(user, db)
-
-@bands_router.post("/join-requests/{request_id}/accept", response_model=dict)
-def accept_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
-    return accept_join_request(request_id, user, db)
-
-@bands_router.delete("/join-requests/{request_id}", response_model=dict)
-def reject_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
-    return reject_join_request(request_id, user, db)
 @bands_router.get("/{band_id}/posts", response_model=list[band_post_response])
 def list_band_posts(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
     return get_band_posts(band_id, db)
