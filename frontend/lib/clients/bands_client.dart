@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
-import '../models/band_models.dart';
+import '../models/join_request.dart';
 import '../services/token_storage.dart';
 import '../utils/compression_helper.dart';
 import 'musician_client.dart';
@@ -217,6 +217,40 @@ class BandsClient {
       final response = await _dio.get('/bands/$bandId/posts');
       final list = response.data as List;
       return list.map((e) => BandPost.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> createJoinRequest(int bandId) async {
+    try {
+      await _dio.post('/bands/$bandId/join-requests');
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<JoinRequest>> getJoinRequests() async {
+    try {
+      final response = await _dio.get('/bands/join-requests');
+      final list = response.data as List;
+      return list.map((e) => JoinRequest.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> acceptJoinRequest(int requestId) async {
+    try {
+      await _dio.post('/bands/join-requests/$requestId/accept');
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> rejectJoinRequest(int requestId) async {
+    try {
+      await _dio.delete('/bands/join-requests/$requestId');
     } on DioException catch (e) {
       throw _mapDioError(e);
     }

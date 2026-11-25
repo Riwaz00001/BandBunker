@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/helpers/alert_helper.dart';
-import 'package:frontend/models/band_models.dart';
+import 'package:frontend/models/join_request.dart';
 import 'package:frontend/services/token_storage.dart';
 import 'package:frontend/widgets/member_tile.dart';
 import 'package:frontend/pages/profile_page.dart';
@@ -297,6 +297,26 @@ class _BandProfilePageState extends State<BandProfilePage> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
+                  ),
+                ),
+
+              // Request to Join (non-owner)
+              if (!_isOwner)
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        await BandsClient.instance.createJoinRequest(widget.bandId);
+                        if (mounted) AlertHelper.success(context, 'Join request sent!');
+                      } catch (e) {
+                        if (mounted) AlertHelper.error(context, e.toString());
+                      }
+                    },
+                    icon: const Icon(Icons.person_add, size: 20),
+                    label: const Text('Request to Join', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(backgroundColor: orange, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                   ),
                 ),
 

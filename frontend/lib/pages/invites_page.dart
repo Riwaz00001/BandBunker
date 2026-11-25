@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:frontend/pages/profile_page.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/helpers/alert_helper.dart';
-import 'package:frontend/models/band_models.dart';
+import 'package:frontend/models/join_request.dart';
 import 'package:frontend/widgets/invite_card.dart';
 import 'package:frontend/pages/band_profile_page.dart';
 
@@ -19,6 +20,7 @@ class _InvitesPageState extends State<InvitesPage> {
   static const Color secondaryText = Color(0xFFBDB8C9);
 
   List<Invite> _invites = [];
+  List<JoinRequest> _joinRequests = [];
   bool _loading = true;
 
   @override
@@ -31,9 +33,11 @@ class _InvitesPageState extends State<InvitesPage> {
     setState(() => _loading = true);
     try {
       final invites = await BandsClient.instance.getInvites();
+      final jrs = await BandsClient.instance.getJoinRequests();
       if (mounted) {
         setState(() {
           _invites = invites;
+          _joinRequests = jrs;
           _loading = false;
         });
       }
@@ -63,7 +67,7 @@ class _InvitesPageState extends State<InvitesPage> {
         color: orange,
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: orange))
-            : _invites.isEmpty
+            : (_invites.isEmpty && _joinRequests.isEmpty)
                 ? ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
@@ -108,11 +112,34 @@ class _InvitesPageState extends State<InvitesPage> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _invites.length,
+                    itemCount: _invites.length + _joinRequests.length,
                     itemBuilder: (context, index) {
-                      return InviteCard(
-                        invite: _invites[index],
-                        onInviteChanged: _loadInvites,
+                      if (index < _invites.length) {
+                        return InviteCard(
+                          invite: _invites[index],
+                          onInviteChanged: _loadInvites,
+                        );
+                      }
+                      final jr = _joinRequests[index - _invites.length];
+                      return Card(
+                        color: cardColor,
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: jr.musicianProfilePicUrl != null ? CachedNetworkImageProvider(jr.musicianProfilePicUrl!) : null,
+                            child: jr.musicianProfilePicUrl == null ? const Icon(Icons.person) : null,
+                          ),
+                          title: Text(jr.musicianName, style: const TextStyle(color: Colors.white)),
+                          subtitle: Text('wants to join ${jr.bandName}', style: const TextStyle(color: secondaryText)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(icon: const Icon(Icons.close, color: Colors.redAccent), onPressed: () async { await BandsClient.instance.rejectJoinRequest(jr.requestId); _loadInvites(); }),
+                              IconButton(icon: const Icon(Icons.check, color: Colors.green), onPressed: () async { await BandsClient.instance.acceptJoinRequest(jr.requestId); _loadInvites(); }),
+                            ],
+                          ),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(musicianId: jr.musicianId))),
+                        ),
                       );
                     },
                   ),

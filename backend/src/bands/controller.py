@@ -2,7 +2,7 @@ from fastapi import File,UploadFile,HTTPException,status
 from sqlalchemy.orm import Session
 from supabase import Client ,create_client
 from src.utils.settings import settings
-from src.bands.models import bands,band_members,band_invites,band_post
+from src.bands.models import bands,band_members,band_invites,band_post,band_join_requests
 from src.musicians.models import musicians,profile_info
 import uuid 
 supabase: Client=create_client(settings.supabase_url,settings.supabase_key)
@@ -202,7 +202,91 @@ def send_invite(musician_id: int, user: musicians, db: Session):
     db.refresh(invite)
     return invite_out(invite, band)
 
-def update_band(band_id: int,band_name: str | None,description: str | None,genre: str | None,file: UploadFile | None,user: musicians,db: Session,):
+def create_join_request(band_id: int, user: musicians, db: Session):
+    band = db.get(bands, band_id)
+    if not band:
+        raise HTTPException(404, "Band not found")
+    if band.owner_id == user.musician_id:
+        raise HTTPException(400, "You already own this band")
+    existing_member = db.query(band_members).filter(
+        band_members.band_id == band_id,
+        band_members.musician_id == user.musician_id,
+    ).first()
+    if existing_member:
+        raise HTTPException(409, "Already a member")
+    existing = db.query(band_join_requests).filter(
+        band_join_requests.band_id == band_id,
+        band_join_requests.musician_id == user.musician_id,
+    ).first()
+    if existing:
+        raise HTTPException(409, "Join request already sent")
+    jr = band_join_requests(band_id=band_id, musician_id=user.musician_id)
+    db.add(jr)
+    db.commit()
+    db.refresh(jr)
+    musician = db.get(musicians, user.musician_id)
+    prof = db.query(profile_info).filter(profile_info.musician_id == user.musician_id).first()
+    return {
+        "request_id": jr.request_id,
+        "band_id": band.band_id,
+        "band_name": band.band_name,
+        "profile_pic_url": pic_url(band.profile_pic_path),
+        "musician_id": user.musician_id,
+        "musician_name": musician.name if musician else "",
+        "musician_profile_pic_url": pic_url(prof.profile_pic_path) if prof else None,
+        "created_at": jr.created_at,
+    }
+
+def get_join_requests(user: musicians, db: Session):
+    rows = (
+        db.query(band_join_requests, bands, musicians, profile_info)
+        .join(bands, bands.band_id == band_join_requests.band_id)
+        .join(musicians, musicians.musician_id == band_join_requests.musician_id)
+        .outerjoin(profile_info, profile_info.musician_id == musicians.musician_id)
+        .filter(bands.owner_id == user.musician_id)
+        .all()
+    )
+    return [
+        {
+            "request_id": jr.request_id,
+            "band_id": band.band_id,
+            "band_name": band.band_name,
+            "profile_pic_url": pic_url(band.profile_pic_path),
+            "musician_id": m.musician_id,
+            "musician_name": m.name,
+            "musician_profile_pic_url": pic_url(prof.profile_pic_path) if prof else None,
+            "created_at": jr.created_at,
+        }
+        for jr, band, m, prof in rows
+    ]
+
+def accept_join_request(request_id: int, user: musicians, db: Session):
+    jr = db.get(band_join_requests, request_id)
+    if not jr:
+        raise HTTPException(404, "Request not found")
+    band = db.get(bands, jr.band_id)
+    if not band or band.owner_id != user.musician_id:
+        raise HTTPException(403, "Not allowed")
+    existing = db.query(band_members).filter(
+        band_members.band_id == band.band_id,
+        band_members.musician_id == jr.musician_id,
+    ).first()
+    if not existing:
+        db.add(band_members(band_id=band.band_id, musician_id=jr.musician_id, role="member"))
+    db.delete(jr)
+    db.commit()
+    return {"ok": True}
+
+def reject_join_request(request_id: int, user: musicians, db: Session):
+    jr = db.get(band_join_requests, request_id)
+    if not jr:
+        raise HTTPException(404, "Request not found")
+    band = db.get(bands, jr.band_id)
+    if not band or band.owner_id != user.musician_id:
+        raise HTTPException(403, "Not allowed")
+    db.delete(jr)
+    db.commit()
+    return {"ok": True}
     band = db.get(bands, band_id)
     if not band:
         raise HTTPException(404, "Band not found")

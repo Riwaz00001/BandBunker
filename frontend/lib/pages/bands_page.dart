@@ -526,17 +526,23 @@ class _BandsPageState extends State<BandsPage> {
             color: orange,
             child: isLoadingBands
                 ? const Center(child: CircularProgressIndicator(color: orange))
-                : myBands.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.4,
-                            child: buildEmptyState(),
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
+                    : myBands.isEmpty
+                        ? (_bandPosts.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.4,
+                                    child: buildEmptyState(),
+                                  ),
+                                ],
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                itemCount: _bandPosts.length,
+                                itemBuilder: (context, index) => BandPostCard(post: _bandPosts[index]),
+                              ))
+                        : ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: _bandPosts.length + (_ownedBand != null ? 1 : 0),
                         itemBuilder: (context, index) {
