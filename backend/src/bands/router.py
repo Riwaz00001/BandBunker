@@ -60,5 +60,6 @@ def add_band_post(band_id: int, caption: str = Form(""), file: UploadFile = File
 @bands_router.get("/posts/all", response_model=list[band_post_response])
 def all_band_posts(db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
     return get_all_band_posts(db)
+@bands_router.get("/{band_id}/posts", response_model=list[band_post_response])
 def list_band_posts(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
     return get_band_posts(band_id, db)
