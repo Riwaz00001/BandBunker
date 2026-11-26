@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:frontend/pages/profile_page.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/helpers/alert_helper.dart';
+import 'package:frontend/models/band_models.dart';
 import 'package:frontend/models/join_request.dart';
 import 'package:frontend/widgets/invite_card.dart';
 import 'package:frontend/pages/band_profile_page.dart';
