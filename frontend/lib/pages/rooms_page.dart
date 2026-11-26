@@ -1,4 +1,5 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../clients/musician_client.dart';
 import '../models/musician_models.dart';
@@ -61,7 +62,7 @@ class _RoomsPageState extends State<RoomsPage> {
     try {
       final profile = await MusicianClient.instance.getProfile();
       if (profile.profilePicUrl != null && profile.profilePicUrl!.isNotEmpty && mounted) {
-        await precacheImage(NetworkImage(profile.profilePicUrl!), context);
+        // CachedNetworkImage handles caching on demand; no precache needed.
       }
       if (mounted) setState(() => _profile = profile);
     } catch (_) {}
@@ -131,25 +132,37 @@ class _RoomsPageState extends State<RoomsPage> {
                    width: 2,
                  ),
                ),
-               child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
-                   ? ClipOval(
-                       child: Image.network(
-                         _profile!.profilePicUrl!,
-                         width: 44,
-                         height: 44,
-                         fit: BoxFit.cover,
-                         errorBuilder: (_, __, ___) => const Icon(
-                           Icons.person_outline,
-                           color: Colors.white,
-                           size: 28,
-                         ),
-                       ),
-                     )
-                   : const Icon(
-                       Icons.person_outline,
-                       color: Colors.white,
-                       size: 28,
-                     ),
+                child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: _profile!.profilePicUrl!,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 256,
+                          maxWidthDiskCache: 256,
+                          placeholder: (context, url) => const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, stackTrace) => const Icon(
+                            Icons.person_outline,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                        size: 28,
+                      ),
              ),
            ),
         ],
@@ -219,13 +232,14 @@ class _RoomsPageState extends State<RoomsPage> {
           width: double.infinity,
           height: 185,
           child: room.imageUrl.isNotEmpty
-              ? Image.network(
-            room.imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return buildImagePlaceholder();
-            },
-          )
+              ? CachedNetworkImage(
+                  imageUrl: room.imageUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 800,
+                  maxWidthDiskCache: 1080,
+                  placeholder: (context, url) => buildImagePlaceholder(),
+                  errorWidget: (context, url, stackTrace) => buildImagePlaceholder(),
+                )
               : buildImagePlaceholder(),
         ),
 

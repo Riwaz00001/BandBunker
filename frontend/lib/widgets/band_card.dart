@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/pages/band_profile_page.dart';
@@ -40,12 +41,25 @@ class BandCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: band.profilePicUrl != null
-                    ? Image.network(
-                        band.profilePicUrl!,
+                    ? CachedNetworkImage(
+                        imageUrl: band.profilePicUrl!,
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+                        memCacheWidth: 256,
+                        maxWidthDiskCache: 256,
+                        placeholder: (context, url) => Container(
+                          width: 64,
+                          height: 64,
+                          color: _kDarkGrey,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: _kOrange,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, stackTrace) => Container(
                           width: 64,
                           height: 64,
                           color: _kDarkGrey,

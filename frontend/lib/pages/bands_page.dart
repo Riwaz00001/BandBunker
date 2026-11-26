@@ -1,9 +1,11 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/create_band.dart';
 import 'package:frontend/pages/invites_page.dart';
 import 'package:frontend/pages/band_profile_page.dart';
 import 'package:frontend/widgets/band_card.dart';
+import 'package:frontend/widgets/band_post_card.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/clients/musician_client.dart';
@@ -29,6 +31,7 @@ class _BandsPageState extends State<BandsPage> {
   final TextEditingController searchController = TextEditingController();
 
   List<Band> myBands = [];
+  List<BandPost> _bandPosts = [];
   bool isLoadingBands = true;
   int? myMusicianId;
   int _inviteCount = 0;
@@ -60,7 +63,15 @@ class _BandsPageState extends State<BandsPage> {
     await Future.wait([
       _loadMyBands(),
       _loadInviteCount(),
+      _loadBandPosts(),
     ]);
+  }
+
+  Future<void> _loadBandPosts() async {
+    try {
+      final posts = await BandsClient.instance.getAllBandPosts();
+      if (mounted) setState(() => _bandPosts = posts);
+    } catch (_) {}
   }
 
   Future<void> _loadMyMusicianId() async {
@@ -216,12 +227,23 @@ class _BandsPageState extends State<BandsPage> {
                   child: ClipOval(
                     child: _profilePicUrl != null &&
                             _profilePicUrl!.isNotEmpty
-                        ? Image.network(
-                            _profilePicUrl!,
+                        ? CachedNetworkImage(
+                            imageUrl: _profilePicUrl!,
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
+                            memCacheWidth: 256,
+                            maxWidthDiskCache: 256,
+                            placeholder: (context, url) => const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, stackTrace) =>
                                 const Icon(
                                   Icons.person_outlined,
                                   color: Colors.white,
@@ -504,25 +526,32 @@ class _BandsPageState extends State<BandsPage> {
             color: orange,
             child: isLoadingBands
                 ? const Center(child: CircularProgressIndicator(color: orange))
-                : myBands.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.4,
-                            child: buildEmptyState(),
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
+                    : myBands.isEmpty
+                        ? (_bandPosts.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                    height: MediaQuery.of(context).size.height * 0.4,
+                                    child: buildEmptyState(),
+                                  ),
+                                ],
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                itemCount: _bandPosts.length,
+                                itemBuilder: (context, index) => BandPostCard(post: _bandPosts[index]),
+                              ))
+                        : ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _ownedBand != null ? 1 : 0,
+                        itemCount: _bandPosts.length + (_ownedBand != null ? 1 : 0),
                         itemBuilder: (context, index) {
-                          final band = _ownedBand!;
-                          return BandCard(
-                            band: band,
-                            isOwner: true,
-                          );
+                          if (_ownedBand != null && index == 0) {
+                            final band = _ownedBand!;
+                            return BandCard(band: band, isOwner: true);
+                          }
+                          final postIndex = _ownedBand != null ? index - 1 : index;
+                          return BandPostCard(post: _bandPosts[postIndex]);
                         },
                       ),
           ),

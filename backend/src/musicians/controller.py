@@ -62,18 +62,23 @@ def create_post(caption:str,file:UploadFile,user:musicians=Depends(authenticated
     "video/mp4": "video",
     "video/quicktime": "video",
     }
-    MAX_SIZE = 50 * 1024 * 1024
+    MAX_IMAGE_SIZE = 2 * 1024 * 1024
+    MAX_VIDEO_SIZE = 20 * 1024 * 1024
     media_type=ALLOWED.get(file.content_type)
     if not media_type:
         raise HTTPException(400,"Unsupported File")
     content=file.file.read()
-    if len(content)>MAX_SIZE:
-        raise HTTPException(413,"File too large")
+    if media_type == "image":
+        if len(content) > MAX_IMAGE_SIZE:
+            raise HTTPException(413,"Image too large (max 2 MB).")
+    else:
+        if len(content) > MAX_VIDEO_SIZE:
+            raise HTTPException(413,"Video too large (max 20 MB).")
     ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "bin"
     file_path = f"uploads/{uuid.uuid4()}.{ext}"
 
     try:
-        supabase.storage.from_(settings.bucket).upload(path=file_path,file=content,file_options={"content-type":file.content_type})
+        supabase.storage.from_(settings.bucket).upload(path=file_path,file=content,file_options={"content-type":file.content_type, **UPLOAD_FILE_OPTIONS})
     except Exception as e:
         raise HTTPException(502,"Upload Failed")
 
@@ -115,7 +120,9 @@ def get_all_posts(db:Session):
 
 #profiles 
 PIC_TYPES={"image/jpeg","image/png","image/webp"}
-MAX_PIC=5*1024*1024
+MAX_PIC=1*1024*1024
+
+UPLOAD_FILE_OPTIONS = {"cache-control": "31536000"}
 
 def pic_url(path:str|None):
     return supabase.storage.from_(settings.bucket).get_public_url(path) if path else None
@@ -154,7 +161,7 @@ def update_profile(bio: str | None, file: UploadFile | None, user: musicians, db
             raise HTTPException(400, "Profile picture must be jpg, png or webp")
         content = file.file.read()
         if len(content) > MAX_PIC:
-            raise HTTPException(413, "Image too large")
+            raise HTTPException(413, "Profile picture too large (max 1 MB).")
 
         ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "jpg"
         new_path = f"profiles/{uuid.uuid4()}.{ext}"
@@ -162,7 +169,7 @@ def update_profile(bio: str | None, file: UploadFile | None, user: musicians, db
             supabase.storage.from_(settings.bucket).upload(
                 path=new_path,
                 file=content,
-                file_options={"content-type": file.content_type},
+                file_options={"content-type": file.content_type, **UPLOAD_FILE_OPTIONS},
             )
         except Exception as e:
             print("storage error:", e)

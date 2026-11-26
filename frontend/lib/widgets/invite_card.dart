@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/clients/bands_client.dart';
@@ -91,7 +92,7 @@ class _InviteCardState extends State<InviteCard> {
                     radius: 28,
                     backgroundColor: _kDarkGrey,
                     backgroundImage: widget.invite.profilePicUrl != null
-                        ? NetworkImage(widget.invite.profilePicUrl!)
+                        ? CachedNetworkImageProvider(widget.invite.profilePicUrl!)
                         : null,
                     child: widget.invite.profilePicUrl == null
                         ? const Icon(Icons.groups, color: _kSecondaryText, size: 28)

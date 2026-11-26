@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/pages/profile_page.dart';
@@ -41,7 +42,7 @@ class MemberTile extends StatelessWidget {
               radius: 24,
               backgroundColor: _kDarkGrey,
               backgroundImage: member.profilePicUrl != null
-                  ? NetworkImage(member.profilePicUrl!)
+                  ? CachedNetworkImageProvider(member.profilePicUrl!)
                   : null,
               child: member.profilePicUrl == null
                   ? const Icon(Icons.person, color: _kSecondaryText, size: 24)

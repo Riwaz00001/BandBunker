@@ -1,4 +1,5 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class OthersProfileView extends StatefulWidget {
@@ -73,7 +74,7 @@ class _OthersProfileViewState extends State<OthersProfileView> {
       backgroundColor: orange,
       child: CircleAvatar(
         radius: 55,
-        backgroundImage: NetworkImage(profileImage),
+        backgroundImage: CachedNetworkImageProvider(profileImage),
       ),
     );
   }
@@ -91,10 +92,28 @@ class _OthersProfileViewState extends State<OthersProfileView> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      post['image']!,
+                    child: CachedNetworkImage(
+                      imageUrl: post['image']!,
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      memCacheWidth: 800,
+                      maxWidthDiskCache: 1080,
+                      placeholder: (context, url) => Container(
+                        color: const Color(0xFF303039),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: orange,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, stackTrace) => Container(
+                        color: const Color(0xFF303039),
+                        child: const Icon(
+                          Icons.music_note,
+                          color: orange,
+                          size: 40,
+                        ),
+                      ),
                     ),
                   ),
                   Padding(
@@ -120,19 +139,17 @@ class _OthersProfileViewState extends State<OthersProfileView> {
           borderRadius: BorderRadius.circular(12),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Image.network(
-          post['image']!,
+        child: CachedNetworkImage(
+          imageUrl: post['image']!,
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-
-            return const Center(
-              child: CircularProgressIndicator(
-                color: orange,
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
+          memCacheWidth: 800,
+          maxWidthDiskCache: 1080,
+          placeholder: (context, progress) => const Center(
+            child: CircularProgressIndicator(
+              color: orange,
+            ),
+          ),
+          errorWidget: (context, error, stackTrace) {
             return const Center(
               child: Icon(
                 Icons.music_note,

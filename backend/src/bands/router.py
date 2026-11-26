@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends,status,File,UploadFile,Form
 from sqlalchemy.orm import Session
-from src.bands.dtos import band_response,band_members_response,invite_response,band_post_response
+from src.bands.dtos import band_response,band_members_response,invite_response,band_post_response,join_request_response
 from src.bands.models import bands,band_members,band_invites
 from src.utils.db import get_db
 from src.utils.auth import authenticated_musician
 from src.musicians.models import musicians
-from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite,create_band_post,get_band_posts
+from src.bands.controller import make_band,update_band,get_my_band,get_band_by_id,get_band_members,get_my_bands,get_invites,reject_invite,send_invite,accept_invite,create_band_post,get_band_posts,get_all_band_posts,create_join_request,get_join_requests,accept_join_request,reject_join_request
 bands_router=APIRouter(prefix="/bands")
 
 # Fixed paths MUST come before /{band_id}
@@ -16,6 +16,18 @@ def my_bands(user: musicians = Depends(authenticated_musician), db: Session = De
 @bands_router.get("/invites", response_model=list[invite_response])
 def my_invites(user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
     return get_invites(user, db)
+
+@bands_router.get("/join-requests", response_model=list[join_request_response])
+def list_join_reqs(user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return get_join_requests(user, db)
+
+@bands_router.post("/join-requests/{request_id}/accept", response_model=dict)
+def accept_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return accept_join_request(request_id, user, db)
+
+@bands_router.delete("/join-requests/{request_id}", response_model=dict)
+def reject_join_req(request_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return reject_join_request(request_id, user, db)
 
 @bands_router.get("/{band_id}", response_model=band_response)
 def get_band(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
@@ -56,6 +68,13 @@ def edit_band(band_id: int,band_name: str | None = Form(None),description: str |
 def add_band_post(band_id: int, caption: str = Form(""), file: UploadFile = File(...), user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
     return create_band_post(band_id, caption, file, user, db)
 
+
+@bands_router.get("/posts/all", response_model=list[band_post_response])
+def all_band_posts(db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
+    return get_all_band_posts(db)
+@bands_router.post("/{band_id}/join-requests", response_model=dict)
+def create_join_req(band_id: int, user: musicians = Depends(authenticated_musician), db: Session = Depends(get_db)):
+    return create_join_request(band_id, user, db)
 
 @bands_router.get("/{band_id}/posts", response_model=list[band_post_response])
 def list_band_posts(band_id: int, db: Session = Depends(get_db), user: musicians = Depends(authenticated_musician)):
