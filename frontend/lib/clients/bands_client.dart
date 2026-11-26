@@ -1,9 +1,9 @@
 import 'dart:io';
-
 import 'package:dio/dio.dart';
-
 import '../models/band_models.dart';
+import '../models/join_request.dart';
 import '../services/token_storage.dart';
+import '../utils/compression_helper.dart';
 import 'musician_client.dart';
 
 class BandsClient {
@@ -54,12 +54,18 @@ class BandsClient {
       }
 
       if (image != null) {
+        final sizeError = CompressionHelper.checkImageSize(image, isAvatar: true);
+        if (sizeError != null) {
+          throw Exception(sizeError);
+        }
+        final compressed = await CompressionHelper.compressAvatar(image);
         fields.add(
           MapEntry(
             'file',
             await MultipartFile.fromFile(
-              image.path,
-              filename: image.path.split('/').last,
+              compressed.path,
+              filename: compressed.path.split('/').last,
+              contentType: DioMediaType.parse('image/jpeg'),
             ),
           ),
         );
@@ -94,12 +100,18 @@ class BandsClient {
       }
 
       if (image != null) {
+        final sizeError = CompressionHelper.checkImageSize(image, isAvatar: true);
+        if (sizeError != null) {
+          throw Exception(sizeError);
+        }
+        final compressed = await CompressionHelper.compressAvatar(image);
         fields.add(
           MapEntry(
             'file',
             await MultipartFile.fromFile(
-              image.path,
-              filename: image.path.split('/').last,
+              compressed.path,
+              filename: compressed.path.split('/').last,
+              contentType: DioMediaType.parse('image/jpeg'),
             ),
           ),
         );
@@ -150,10 +162,36 @@ class BandsClient {
     required File file,
   }) async {
     try {
-      final fileName = file.path.split('/').last;
+      final extension = file.path.split('/').last.split('.').last.toLowerCase();
+      final isVideo = ['mp4', 'mov', 'quicktime'].contains(extension);
+
+      if (isVideo) {
+        final sizeError = CompressionHelper.checkVideoSize(file);
+        if (sizeError != null) {
+          throw Exception(sizeError);
+        }
+        final compressed = await CompressionHelper.compressVideo(file);
+        final fileName = compressed.path.split('/').last;
+        final formData = FormData.fromMap({
+          'caption': caption,
+          'file': await MultipartFile.fromFile(compressed.path, filename: fileName),
+        });
+        final response = await _dio.post(
+          '/bands/$bandId/posts',
+          data: formData,
+        );
+        return BandPost.fromJson(response.data as Map<String, dynamic>);
+      }
+
+      final sizeError = CompressionHelper.checkImageSize(file, isAvatar: false);
+      if (sizeError != null) {
+        throw Exception(sizeError);
+      }
+      final compressed = await CompressionHelper.compressFeedImage(file);
+      final fileName = compressed.path.split('/').last;
       final formData = FormData.fromMap({
         'caption': caption,
-        'file': await MultipartFile.fromFile(file.path, filename: fileName),
+        'file': await MultipartFile.fromFile(compressed.path, filename: fileName),
       });
       final response = await _dio.post(
         '/bands/$bandId/posts',
@@ -165,11 +203,55 @@ class BandsClient {
     }
   }
 
+  Future<List<BandPost>> getAllBandPosts() async {
+    try {
+      final response = await _dio.get('/bands/posts/all');
+      final list = response.data as List;
+      return list.map((e) => BandPost.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   Future<List<BandPost>> getBandPosts(int bandId) async {
     try {
       final response = await _dio.get('/bands/$bandId/posts');
       final list = response.data as List;
       return list.map((e) => BandPost.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> createJoinRequest(int bandId) async {
+    try {
+      await _dio.post('/bands/$bandId/join-requests');
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<JoinRequest>> getJoinRequests() async {
+    try {
+      final response = await _dio.get('/bands/join-requests');
+      final list = response.data as List;
+      return list.map((e) => JoinRequest.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> acceptJoinRequest(int requestId) async {
+    try {
+      await _dio.post('/bands/join-requests/$requestId/accept');
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> rejectJoinRequest(int requestId) async {
+    try {
+      await _dio.delete('/bands/join-requests/$requestId');
     } on DioException catch (e) {
       throw _mapDioError(e);
     }

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -68,7 +69,7 @@ class _PostCardState extends State<PostCard> {
               CircleAvatar(
                 radius: 22,
                 backgroundImage: widget.post.profilePicUrl != null
-                    ? NetworkImage(widget.post.profilePicUrl!)
+                    ? CachedNetworkImageProvider(widget.post.profilePicUrl!)
                     : null,
                 child: widget.post.profilePicUrl == null
                     ? const Icon(Icons.person, size: 22)
@@ -124,12 +125,25 @@ class _PostCardState extends State<PostCard> {
           if (widget.post.mediaType == 'image')
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                widget.post.mediaUrl,
+              child: CachedNetworkImage(
+                imageUrl: widget.post.mediaUrl,
                 width: double.infinity,
                 height: 300,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
+                memCacheWidth: 800,
+                maxWidthDiskCache: 1080,
+                placeholder: (context, url) => Container(
+                  width: double.infinity,
+                  height: 300,
+                  color: const Color(0xFF303039),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFFF7A00),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, stackTrace) => Container(
                   width: double.infinity,
                   height: 300,
                   color: const Color(0xFF303039),
@@ -272,7 +286,7 @@ class _PostCardCompactState extends State<PostCardCompact> {
               CircleAvatar(
                 radius: 24,
                 backgroundImage: widget.post.profilePicUrl != null
-                    ? NetworkImage(widget.post.profilePicUrl!)
+                    ? CachedNetworkImageProvider(widget.post.profilePicUrl!)
                     : null,
                 child: widget.post.profilePicUrl == null
                     ? const Icon(Icons.person, size: 24)
@@ -330,11 +344,22 @@ class _PostCardCompactState extends State<PostCardCompact> {
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  widget.post.mediaUrl,
+                child: CachedNetworkImage(
+                  imageUrl: widget.post.mediaUrl,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  memCacheWidth: 800,
+                  maxWidthDiskCache: 1080,
+                  placeholder: (context, url) => Container(
+                    color: const Color(0xFF303039),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF7A00),
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, stackTrace) => Container(
                     color: const Color(0xFF303039),
                     child: const Icon(
                       Icons.broken_image,

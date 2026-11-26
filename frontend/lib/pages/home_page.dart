@@ -1,4 +1,5 @@
 import 'discover_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'bands_page.dart';
 import 'rooms_page.dart';
@@ -161,12 +162,23 @@ class _HomePageState extends State<HomePage> {
                   child: ClipOval(
                     child: _profilePicUrl != null &&
                             _profilePicUrl!.isNotEmpty
-                        ? Image.network(
-                            _profilePicUrl!,
+                        ? CachedNetworkImage(
+                            imageUrl: _profilePicUrl!,
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
+                            memCacheWidth: 256,
+                            maxWidthDiskCache: 256,
+                            placeholder: (context, url) => const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, stackTrace) =>
                                 const Icon(
                                   Icons.person_outline,
                                   color: Colors.white,

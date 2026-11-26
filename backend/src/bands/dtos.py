@@ -27,11 +27,22 @@ class invite_response(BaseModel):
     created_at: datetime
 
 
+class join_request_response(BaseModel):
+    request_id: int
+    band_id: int
+    band_name: str
+    profile_pic_url: str | None
+    musician_id: int
+    musician_name: str
+    musician_profile_pic_url: str | None
+    created_at: datetime
+
 class band_post_response(BaseModel):
     post_id: int
     band_id: int
+    band_name: str | None = None
+    profile_pic_url: str | None = None
     caption: str | None
     media_type: str
     media_url: str
     created_at: datetime
-

@@ -1,9 +1,11 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/create_band.dart';
 import 'package:frontend/pages/invites_page.dart';
 import 'package:frontend/pages/band_profile_page.dart';
 import 'package:frontend/widgets/band_card.dart';
+import 'package:frontend/widgets/band_post_card.dart';
 import 'package:frontend/models/band_models.dart';
 import 'package:frontend/clients/bands_client.dart';
 import 'package:frontend/clients/musician_client.dart';
@@ -29,6 +31,7 @@ class _BandsPageState extends State<BandsPage> {
   final TextEditingController searchController = TextEditingController();
 
   List<Band> myBands = [];
+  List<BandPost> _bandPosts = [];
   bool isLoadingBands = true;
   int? myMusicianId;
   int _inviteCount = 0;
@@ -60,7 +63,15 @@ class _BandsPageState extends State<BandsPage> {
     await Future.wait([
       _loadMyBands(),
       _loadInviteCount(),
+      _loadBandPosts(),
     ]);
+  }
+
+  Future<void> _loadBandPosts() async {
+    try {
+      final posts = await BandsClient.instance.getAllBandPosts();
+      if (mounted) setState(() => _bandPosts = posts);
+    } catch (_) {}
   }
 
   Future<void> _loadMyMusicianId() async {
@@ -216,12 +227,23 @@ class _BandsPageState extends State<BandsPage> {
                   child: ClipOval(
                     child: _profilePicUrl != null &&
                             _profilePicUrl!.isNotEmpty
-                        ? Image.network(
-                            _profilePicUrl!,
+                        ? CachedNetworkImage(
+                            imageUrl: _profilePicUrl!,
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
+                            memCacheWidth: 256,
+                            maxWidthDiskCache: 256,
+                            placeholder: (context, url) => const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, stackTrace) =>
                                 const Icon(
                                   Icons.person_outlined,
                                   color: Colors.white,
@@ -253,14 +275,14 @@ class _BandsPageState extends State<BandsPage> {
 
   Widget buildHeading() {
     return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: 18),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
           'My Bands',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 24,
+            fontSize: 21,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -270,41 +292,56 @@ class _BandsPageState extends State<BandsPage> {
 
   Widget buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: TextField(
-        controller: searchController,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 15,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Search Bands',
-          hintStyle: const TextStyle(
-            color: secondaryText,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: SizedBox(
+        height: 46,
+        child: TextField(
+          controller: searchController,
+          style: const TextStyle(
+            color: Colors.white,
             fontSize: 14,
           ),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: secondaryText,
-            size: 27,
-          ),
-          suffixIcon: IconButton(
-            onPressed: () {
-              // Advanced filters can be added later.
-            },
-            icon: const Icon(
-              Icons.tune,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: 'Search Bands',
+            hintStyle: const TextStyle(
               color: secondaryText,
+              fontSize: 13,
             ),
-          ),
-          filled: true,
-          fillColor: cardColor,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 20,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none,
+            prefixIcon: const Icon(
+              Icons.search,
+              color: secondaryText,
+              size: 22,
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 42,
+              minHeight: 42,
+            ),
+            suffixIcon: IconButton(
+              constraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                // Advanced filters can be added later.
+              },
+              icon: const Icon(
+                Icons.tune,
+                color: secondaryText,
+                size: 20,
+              ),
+            ),
+            filled: true,
+            fillColor: cardColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
       ),
@@ -315,16 +352,16 @@ class _BandsPageState extends State<BandsPage> {
   Widget buildMyBandButton() {
     if (isLoadingBands) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         child: SizedBox(
           width: double.infinity,
-          height: 52,
+          height: 46,
           child: ElevatedButton(
             onPressed: null,
             style: ElevatedButton.styleFrom(
               backgroundColor: orange,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: const SizedBox(
@@ -390,7 +427,7 @@ class _BandsPageState extends State<BandsPage> {
           label: Text(
             _ownedBand != null ? 'My Band' : 'Create Band',
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -481,53 +518,60 @@ class _BandsPageState extends State<BandsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        buildHeader(),
-        const SizedBox(height: 22),
-        buildHeading(),
-        const SizedBox(height: 22),
-        buildSearchBar(),
-        const SizedBox(height: 18),
-
-        // Joined Bands section (bands user is member of but doesn't own)
-        buildJoinedBandsSection(),
-
-        // Create Band / My Band button
-        buildMyBandButton(),
-
-        const SizedBox(height: 18),
-
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadMyBands,
-            color: orange,
-            child: isLoadingBands
-                ? const Center(child: CircularProgressIndicator(color: orange))
-                : myBands.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.4,
-                            child: buildEmptyState(),
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _ownedBand != null ? 1 : 0,
-                        itemBuilder: (context, index) {
-                          final band = _ownedBand!;
-                          return BandCard(
-                            band: band,
-                            isOwner: true,
-                          );
-                        },
-                      ),
-          ),
+    return RefreshIndicator(
+      onRefresh: _loadMyBands,
+      color: orange,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
         ),
-      ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            buildHeader(),
+            const SizedBox(height: 10),
+
+            buildHeading(),
+            const SizedBox(height: 10),
+
+            buildSearchBar(),
+            const SizedBox(height: 13),
+
+            // Joined Bands section
+            buildJoinedBandsSection(),
+
+            // Create Band / My Band button
+            buildMyBandButton(),
+            const SizedBox(height: 18),
+
+            if (isLoadingBands)
+              const SizedBox(
+                height: 220,
+                child: Center(
+                  child: CircularProgressIndicator(color: orange),
+                ),
+              )
+            else if (myBands.isEmpty && _bandPosts.isEmpty)
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.35,
+                child: buildEmptyState(),
+              )
+            else ...[
+                if (myBands.isNotEmpty && _ownedBand != null)
+                  BandCard(
+                    band: _ownedBand!,
+                    isOwner: true,
+                  ),
+
+                ..._bandPosts.map(
+                      (post) => BandPostCard(post: post),
+                ),
+              ],
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 }

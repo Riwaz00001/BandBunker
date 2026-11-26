@@ -2,12 +2,12 @@ from fastapi import File,UploadFile,HTTPException,status
 from sqlalchemy.orm import Session
 from supabase import Client ,create_client
 from src.utils.settings import settings
-from src.bands.models import bands,band_members,band_invites,band_post
+from src.bands.models import bands,band_members,band_invites,band_post,band_join_requests
 from src.musicians.models import musicians,profile_info
 import uuid 
 supabase: Client=create_client(settings.supabase_url,settings.supabase_key)
 PIC_TYPES={"image/jpeg","image/png","image/webp"}
-MAX_PIC=5*1024*1024
+MAX_PIC=1*1024*1024
 
 POST_ALLOWED = {
     "image/jpeg": "image",
@@ -16,7 +16,10 @@ POST_ALLOWED = {
     "video/mp4": "video",
     "video/quicktime": "video",
 }
-POST_MAX_SIZE = 50 * 1024 * 1024
+POST_MAX_IMAGE_SIZE = 2 * 1024 * 1024
+POST_MAX_VIDEO_SIZE = 20 * 1024 * 1024
+
+UPLOAD_FILE_OPTIONS = {"cache-control": "31536000"}
 
 def pic_url(path:str|None):
     return supabase.storage.from_(settings.bucket).get_public_url(path) if path else None
@@ -26,13 +29,13 @@ def save_pic(file:UploadFile)->str:
         raise HTTPException(400,"Must be jpg,png or webp")
     content=file.file.read()
     if len(content)>MAX_PIC:
-        raise HTTPException(413,"Image to large")
+        raise HTTPException(413,"Profile picture too large (max 1 MB).")
     ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "jpg"
     path = f"bands/{uuid.uuid4()}.{ext}"
     try:
         supabase.storage.from_(settings.bucket).upload(
             path=path, file=content,
-            file_options={"content-type": file.content_type},
+            file_options={"content-type": file.content_type, **UPLOAD_FILE_OPTIONS},
         )
     except Exception as e:
         print("storage error:", e)
@@ -199,6 +202,93 @@ def send_invite(musician_id: int, user: musicians, db: Session):
     db.refresh(invite)
     return invite_out(invite, band)
 
+def create_join_request(band_id: int, user: musicians, db: Session):
+    band = db.get(bands, band_id)
+    if not band:
+        raise HTTPException(404, "Band not found")
+    if band.owner_id == user.musician_id:
+        raise HTTPException(400, "You already own this band")
+    existing_member = db.query(band_members).filter(
+        band_members.band_id == band_id,
+        band_members.musician_id == user.musician_id,
+    ).first()
+    if existing_member:
+        raise HTTPException(409, "Already a member")
+    existing = db.query(band_join_requests).filter(
+        band_join_requests.band_id == band_id,
+        band_join_requests.musician_id == user.musician_id,
+    ).first()
+    if existing:
+        raise HTTPException(409, "Join request already sent")
+    jr = band_join_requests(band_id=band_id, musician_id=user.musician_id)
+    db.add(jr)
+    db.commit()
+    db.refresh(jr)
+    musician = db.get(musicians, user.musician_id)
+    prof = db.query(profile_info).filter(profile_info.musician_id == user.musician_id).first()
+    return {
+        "request_id": jr.request_id,
+        "band_id": band.band_id,
+        "band_name": band.band_name,
+        "profile_pic_url": pic_url(band.profile_pic_path),
+        "musician_id": user.musician_id,
+        "musician_name": musician.name if musician else "",
+        "musician_profile_pic_url": pic_url(prof.profile_pic_path) if prof else None,
+        "created_at": jr.created_at,
+    }
+
+def get_join_requests(user: musicians, db: Session):
+    rows = (
+        db.query(band_join_requests, bands, musicians, profile_info)
+        .join(bands, bands.band_id == band_join_requests.band_id)
+        .join(musicians, musicians.musician_id == band_join_requests.musician_id)
+        .outerjoin(profile_info, profile_info.musician_id == musicians.musician_id)
+        .filter(bands.owner_id == user.musician_id)
+        .all()
+    )
+    return [
+        {
+            "request_id": jr.request_id,
+            "band_id": band.band_id,
+            "band_name": band.band_name,
+            "profile_pic_url": pic_url(band.profile_pic_path),
+            "musician_id": m.musician_id,
+            "musician_name": m.name,
+            "musician_profile_pic_url": pic_url(prof.profile_pic_path) if prof else None,
+            "created_at": jr.created_at,
+        }
+        for jr, band, m, prof in rows
+    ]
+
+def accept_join_request(request_id: int, user: musicians, db: Session):
+    jr = db.get(band_join_requests, request_id)
+    if not jr:
+        raise HTTPException(404, "Request not found")
+    band = db.get(bands, jr.band_id)
+    if not band or band.owner_id != user.musician_id:
+        raise HTTPException(403, "Not allowed")
+    existing = db.query(band_members).filter(
+        band_members.band_id == band.band_id,
+        band_members.musician_id == jr.musician_id,
+    ).first()
+    if not existing:
+        db.add(band_members(band_id=band.band_id, musician_id=jr.musician_id, role="member"))
+    db.delete(jr)
+    db.commit()
+    return {"ok": True}
+
+def reject_join_request(request_id: int, user: musicians, db: Session):
+    jr = db.get(band_join_requests, request_id)
+    if not jr:
+        raise HTTPException(404, "Request not found")
+    band = db.get(bands, jr.band_id)
+    if not band or band.owner_id != user.musician_id:
+        raise HTTPException(403, "Not allowed")
+    db.delete(jr)
+    db.commit()
+    return {"ok": True}
+
+
 def update_band(band_id: int,band_name: str | None,description: str | None,genre: str | None,file: UploadFile | None,user: musicians,db: Session,):
     band = db.get(bands, band_id)
     if not band:
@@ -233,7 +323,6 @@ def update_band(band_id: int,band_name: str | None,description: str | None,genre
         print("db error:", e)
         raise HTTPException(500, "Could not update band")
 
-    # delete the replaced picture only after the commit succeeded
     if new_path and old_path:
         try:
             supabase.storage.from_(settings.bucket).remove([old_path])
@@ -243,10 +332,14 @@ def update_band(band_id: int,band_name: str | None,description: str | None,genre
     return band_out(band)
 
 
-def band_post_out(p: band_post) -> dict:
+def band_post_out(p: band_post, band: bands | None = None) -> dict:
+    if band is None:
+        band = None
     return {
         "post_id": p.post_id,
         "band_id": p.band_id,
+        "band_name": band.band_name if band else None,
+        "profile_pic_url": pic_url(band.profile_pic_path) if band else None,
         "caption": p.caption,
         "media_type": p.media_type,
         "media_url": supabase.storage.from_(settings.bucket).get_public_url(p.file_path),
@@ -265,13 +358,17 @@ def create_band_post(band_id: int, caption: str, file: UploadFile, user: musicia
     if not media_type:
         raise HTTPException(400, "Unsupported File")
     content = file.file.read()
-    if len(content) > POST_MAX_SIZE:
-        raise HTTPException(413, "File too large")
+    if media_type == "image":
+        if len(content) > POST_MAX_IMAGE_SIZE:
+            raise HTTPException(413, "Image too large (max 2 MB).")
+    else:
+        if len(content) > POST_MAX_VIDEO_SIZE:
+            raise HTTPException(413, "Video too large (max 20 MB).")
     ext = (file.filename or "").rsplit(".", 1)[-1].lower() or "bin"
     file_path = f"bands/posts/{uuid.uuid4()}.{ext}"
 
     try:
-        supabase.storage.from_(settings.bucket).upload(path=file_path, file=content, file_options={"content-type": file.content_type})
+        supabase.storage.from_(settings.bucket).upload(path=file_path, file=content, file_options={"content-type": file.content_type, **UPLOAD_FILE_OPTIONS})
     except Exception as e:
         raise HTTPException(502, "Upload Failed")
 
@@ -285,7 +382,7 @@ def create_band_post(band_id: int, caption: str, file: UploadFile, user: musicia
         supabase.storage.from_(settings.bucket).remove([file_path])
         raise HTTPException(500, "Could not save post")
 
-    return band_post_out(post)
+    return band_post_out(post, band)
 
 
 def get_band_posts(band_id: int, db: Session):
@@ -298,4 +395,14 @@ def get_band_posts(band_id: int, db: Session):
         .order_by(band_post.created_at.desc())
         .all()
     )
-    return [band_post_out(p) for p in rows]
+    return [band_post_out(p, band) for p in rows]
+
+
+def get_all_band_posts(db: Session):
+    rows = (
+        db.query(band_post, bands)
+        .join(bands, bands.band_id == band_post.band_id)
+        .order_by(band_post.created_at.desc())
+        .all()
+    )
+    return [band_post_out(p, b) for p, b in rows]
