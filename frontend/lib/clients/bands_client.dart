@@ -1,7 +1,5 @@
 import 'dart:io';
-
 import 'package:dio/dio.dart';
-
 import '../models/band_models.dart';
 import '../models/join_request.dart';
 import '../services/token_storage.dart';

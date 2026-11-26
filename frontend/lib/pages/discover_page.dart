@@ -24,6 +24,19 @@ class _DiscoverPageState extends State<DiscoverPage> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
+  // Filter posts according to musician name
+  List<Post> get filteredPosts {
+    final searchText = searchController.text.trim().toLowerCase();
+
+    if (searchText.isEmpty) {
+      return posts;
+    }
+
+    return posts.where((post) {
+      return post.musicianName.toLowerCase().contains(searchText);
+    }).toList();
+  }
+
   final TextEditingController searchController =
   TextEditingController();
 
@@ -226,43 +239,43 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  // Compact Search Bar
+  // Search Bar
   Widget buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       child: TextField(
         controller: searchController,
+
+        onChanged: (value) {
+          setState(() {});
+        },
+
         style: const TextStyle(
           color: Colors.white,
           fontSize: 14,
         ),
+
         decoration: InputDecoration(
-          hintText: 'Search by Name and Roles.',
+          hintText: 'Search musicians by name...',
           hintStyle: const TextStyle(
             color: secondaryText,
             fontSize: 13,
           ),
+
           prefixIcon: const Icon(
             Icons.search,
             color: secondaryText,
             size: 23,
           ),
-          suffixIcon: IconButton(
-            onPressed: () {
-              // Advanced filters can be added later.
-            },
-            icon: const Icon(
-              Icons.tune,
-              color: secondaryText,
-              size: 21,
-            ),
-          ),
+
           filled: true,
           fillColor: cardColor,
           isDense: true,
+
           contentPadding: const EdgeInsets.symmetric(
             vertical: 12,
           ),
+
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
@@ -360,9 +373,50 @@ class _DiscoverPageState extends State<DiscoverPage> {
       ),
     );
   }
+  Widget buildNoSearchResults() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_off,
+              color: Colors.white24,
+              size: 60,
+            ),
+
+            SizedBox(height: 15),
+
+            Text(
+              'No musicians found',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            SizedBox(height: 8),
+
+            Text(
+              'Try searching with another musician name.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: secondaryText,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final displayedPosts = filteredPosts;
+
     return RefreshIndicator(
       onRefresh: _loadPosts,
       color: orange,
@@ -370,7 +424,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
 
-          // Header scrolls away with posts
+          // Header
           SliverToBoxAdapter(
             child: buildHeader(),
           ),
@@ -417,25 +471,32 @@ class _DiscoverPageState extends State<DiscoverPage> {
               ),
             )
 
-          // Empty state
+          // No posts available
           else if (posts.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: buildEmptyState(),
             )
 
-          // Posts
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  return PostCard(
-                    post: posts[index],
-                  );
-                },
-                childCount: posts.length,
+          // No matching musician
+          else if (displayedPosts.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: buildNoSearchResults(),
+              )
+
+            // Display filtered posts
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                    return PostCard(
+                      post: displayedPosts[index],
+                    );
+                  },
+                  childCount: displayedPosts.length,
+                ),
               ),
-            ),
         ],
       ),
     );
