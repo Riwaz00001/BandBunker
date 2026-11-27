@@ -45,6 +45,8 @@ class BookingResponse(BaseModel):
     room_name: str
     band_id: int
     band_name: str
+    band_member_count: int = 0
+    band_profile_pic: Optional[str] = None
     date: date
     time_slot: str
     status: str

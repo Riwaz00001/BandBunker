@@ -3,7 +3,7 @@ from fastapi import Depends,HTTPException,status
 from src.utils.db import get_db
 from src.room_owner.dtos import registration_info,login_info,RoomCreateRequest,BookingCreateRequest
 from src.room_owner.models import owners,Room,Booking
-from src.bands.models import bands
+from src.bands.models import bands, band_members
 from src.musicians.models import musicians
 from pwdlib import PasswordHash
 import jwt
@@ -87,7 +87,25 @@ def list_owner_bookings(owner:owners,db:Session):
     room_ids=[r.room_id for r in rooms]
     if not room_ids:
         return []
-    return db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
+    bookings=db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
+    out=[]
+    for b in bookings:
+        room=db.query(Room).filter(Room.room_id==b.room_id).first()
+        band=db.query(bands).filter(bands.band_id==b.band_id).first()
+        member_count=db.query(band_members).filter(band_members.band_id==b.band_id).count()
+        out.append({
+            "booking_id": b.booking_id,
+            "room_id": b.room_id,
+            "room_name": room.name if room else "",
+            "band_id": b.band_id,
+            "band_name": band.band_name if band else "",
+            "band_member_count": member_count,
+            "band_profile_pic": band.profile_pic_path if band else None,
+            "date": b.date,
+            "time_slot": b.time_slot,
+            "status": b.status,
+        })
+    return out
 
 def list_musician_bookings(musician:musicians,db:Session):
     from src.bands.models import band_members
@@ -95,11 +113,6 @@ def list_musician_bookings(musician:musicians,db:Session):
     if not band_ids:
         return []
     return db.query(Booking).filter(Booking.band_id.in_(band_ids)).all()
-    rooms=db.query(Room).filter(Room.owner_id==owner.owner_id).all()
-    room_ids=[r.room_id for r in rooms]
-    if not room_ids:
-        return []
-    return db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
 
 def update_booking_status(owner:owners,booking_id:int,status:str,db:Session):
     booking=db.query(Booking).filter(Booking.booking_id==booking_id).first()

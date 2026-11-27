@@ -99,6 +99,23 @@ class OwnerClient {
       throw _mapDioError(e);
     }
   }
+  Future<List<Map<String, dynamic>>> getOwnerBookings() async {
+    try {
+      final response = await _dio.get('/owner/bookings');
+      final list = response.data as List;
+      return list.map((e) => e as Map<String, dynamic>).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> updateBookingStatus(int bookingId, String status) async {
+    try {
+      await _dio.patch('/owner/bookings/$bookingId', queryParameters: {'status': status});
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
   ApiException _mapDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

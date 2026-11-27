@@ -189,6 +189,16 @@ class MusicianClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getMyBookings() async {
+    try {
+      final response = await _dio.get('/bookings/mine');
+      final list = response.data as List;
+      return list.map((e) => e as Map<String, dynamic>).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   ApiException _mapDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

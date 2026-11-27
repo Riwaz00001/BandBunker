@@ -55,12 +55,14 @@ class _RoomsPageState extends State<RoomsPage> {
   // Empty until real room information comes from the backend.
   final List<JammingRoom> rooms = [];
   Profile? _profile;
+  int _pendingBookings = 0;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
     _loadRooms();
+    _loadPendingBookings();
   }
 
   Future<void> _loadRooms() async {
@@ -147,6 +149,17 @@ class _RoomsPageState extends State<RoomsPage> {
         // CachedNetworkImage handles caching on demand; no precache needed.
       }
       if (mounted) setState(() => _profile = profile);
+    } catch (_) {}
+  }
+
+  Future<void> _loadPendingBookings() async {
+    try {
+      final bookings = await MusicianClient.instance.getMyBookings();
+      if (mounted) {
+        setState(() {
+          _pendingBookings = bookings.where((b) => (b['status'] ?? '') == 'Pending').length;
+        });
+      }
     } catch (_) {}
   }
 
@@ -246,7 +259,48 @@ class _RoomsPageState extends State<RoomsPage> {
                         size: 28,
                       ),
              ),
-           ),
+             ),
+            const SizedBox(width: 12),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  onPressed: _loadPendingBookings,
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  tooltip: 'Pending booking requests',
+                ),
+                if (_pendingBookings > 0)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: orange,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$_pendingBookings',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
         ],
       ),
     );
