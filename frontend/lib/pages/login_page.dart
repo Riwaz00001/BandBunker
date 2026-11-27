@@ -522,7 +522,6 @@ class _LoginPageState extends State<LoginPage> {
               },
             ),
           ),
-
           // Display loading overlay while backend request is processing
           if (isLoading) buildLoadingOverlay(),
         ],

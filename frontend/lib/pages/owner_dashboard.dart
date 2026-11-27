@@ -2,9 +2,14 @@
 import 'package:flutter/material.dart';
 import '../services/token_storage.dart';
 import 'login_page.dart';
+import 'time_pricing.dart';
 
 class owner_dashboard extends StatefulWidget {
-  const owner_dashboard({super.key});
+  final String studioName;
+  const owner_dashboard({
+    super.key,
+    this.studioName = '',
+  });
 
   @override
   State<owner_dashboard> createState() => _owner_dashboardState();
@@ -57,266 +62,36 @@ class _owner_dashboardState extends State<owner_dashboard> {
     }
   }
 
-  // Open the room registration/editing form.
+
   Future<void> openRoomForm({RoomData? existingRoom}) async {
-    final nameController = TextEditingController(
-      text: existingRoom?.name ?? '',
-    );
-
-    final priceController = TextEditingController(
-      text: existingRoom?.price ?? '',
-    );
-
-    final selectedSlots = <String>{
-      ...?existingRoom?.timeSlots,
-    };
-
-    final availableSlots = [
-      '8:00 AM - 10:00 AM',
-      '10:00 AM - 12:00 PM',
-      '12:00 PM - 2:00 PM',
-      '2:00 PM - 4:00 PM',
-      '4:00 PM - 6:00 PM',
-      '6:00 PM - 8:00 PM',
-      '8:00 PM - 10:00 PM',
-    ];
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+    final result = await Navigator.push<RoomData>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TimePricingPage(
+          studioName: widget.studioName,
+          existingRoom: existingRoom,
+        ),
       ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                22,
-                24,
-                22,
-                MediaQuery.of(context).viewInsets.bottom + 25,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    Text(
-                      existingRoom == null
-                          ? 'Register Your Room'
-                          : 'Edit Room Information',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 7),
-
-                    const Text(
-                      'Enter your rehearsal room details and availability.',
-                      style: TextStyle(
-                        color: secondaryText,
-                        fontSize: 13,
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    const Text(
-                      'Room Name',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 9),
-
-                    TextField(
-                      controller: nameController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration(
-                        'e.g. Music Hub Studio',
-                        Icons.meeting_room_outlined,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    const Text(
-                      'Price Per Hour (NPR)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 9),
-
-                    TextField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration(
-                        'e.g. 800',
-                        Icons.currency_rupee,
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    const Text(
-                      'Available Time Slots',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    const Text(
-                      'Select all the time slots when your room is available.',
-                      style: TextStyle(
-                        color: secondaryText,
-                        fontSize: 12,
-                      ),
-                    ),
-
-                    const SizedBox(height: 13),
-
-                    Wrap(
-                      spacing: 9,
-                      runSpacing: 10,
-                      children: availableSlots.map((slot) {
-                        final selected = selectedSlots.contains(slot);
-
-                        return ChoiceChip(
-                          label: Text(
-                            slot,
-                            style: TextStyle(
-                              color: selected
-                                  ? Colors.white
-                                  : secondaryText,
-                              fontSize: 12,
-                            ),
-                          ),
-                          selected: selected,
-                          selectedColor: orange,
-                          backgroundColor: const Color(0xFF303039),
-                          checkmarkColor: Colors.white,
-                          onSelected: (value) {
-                            setSheetState(() {
-                              if (value) {
-                                selectedSlots.add(slot);
-                              } else {
-                                selectedSlots.remove(slot);
-                              }
-                            });
-                          },
-                          side: BorderSide(
-                            color: selected
-                                ? orange
-                                : Colors.white12,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final name = nameController.text.trim();
-                          final price = priceController.text.trim();
-
-                          if (name.isEmpty ||
-                              price.isEmpty ||
-                              double.tryParse(price) == null ||
-                              double.parse(price) <= 0 ||
-                              selectedSlots.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Enter a valid room name, price and at least one time slot.',
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            return;
-                          }
-
-                          setState(() {
-                            myRoom = RoomData(
-                              name: name,
-                              price: price,
-                              timeSlots: selectedSlots.toList(),
-                            );
-                          });
-
-                          Navigator.pop(sheetContext);
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                existingRoom == null
-                                    ? 'Room details added!'
-                                    : 'Room details updated!',
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: orange,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                        ),
-                        child: Text(
-                          existingRoom == null
-                              ? 'Register Room'
-                              : 'Save Changes',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
 
-    nameController.dispose();
-    priceController.dispose();
+    if (result != null && mounted) {
+      setState(() {
+        myRoom = result;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            existingRoom == null
+                ? 'Room details added!'
+                : 'Room details updated!',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
+
 
   InputDecoration _inputDecoration(String hint, IconData icon) {
     return InputDecoration(
@@ -1079,18 +854,6 @@ class _owner_dashboardState extends State<owner_dashboard> {
   }
 }
 
-// Room model for the frontend.
-class RoomData {
-  final String name;
-  final String price;
-  final List<String> timeSlots;
-
-  RoomData({
-    required this.name,
-    required this.price,
-    required this.timeSlots,
-  });
-}
 
 // Booking request model for the frontend.
 class BookingRequest {
