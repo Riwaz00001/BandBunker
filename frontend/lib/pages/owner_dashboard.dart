@@ -27,6 +27,9 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
   List<BookingRequest> bookingRequests = [];
 
+  bool _isLoading = true;
+  bool _isCreatingRoom = false;
+
   int get pendingRequests =>
       bookingRequests.where((request) => request.status == 'Pending').length;
 
@@ -39,6 +42,7 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
   Future<void> _loadRooms() async {
     try {
+      setState(() => _isLoading = true);
       final rooms = await OwnerClient.instance.getMyRooms();
       if (mounted) {
         setState(() {
@@ -52,9 +56,12 @@ class _owner_dashboardState extends State<owner_dashboard> {
                 ),
               )
               .toList();
+          _isLoading = false;
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadBookings() async {
@@ -62,15 +69,18 @@ class _owner_dashboardState extends State<owner_dashboard> {
       final bookings = await OwnerClient.instance.getOwnerBookings();
       if (mounted) {
         setState(() {
-          bookingRequests = bookings.map((b) => BookingRequest(
-            bookingId: b['booking_id'] as int?,
-            bandName: (b['band_name'] ?? '') as String,
-            date: b['date'].toString(),
-            time: (b['time_slot'] ?? '') as String,
-            members: (b['band_member_count'] as int? ?? 0),
-            profilePic: (b['band_profile_pic'] as String?),
-            status: (b['status'] ?? 'Pending') as String,
-          )).toList();
+          bookingRequests = bookings
+              .map((b) => BookingRequest(
+                bookingId: b['booking_id'] as int?,
+                bandName: (b['band_name'] ?? '') as String,
+                date: b['date'].toString(),
+                time: (b['time_slot'] ?? '') as String,
+                members: (b['band_member_count'] as int? ?? 0),
+                profilePic: (b['band_profile_pic'] as String?),
+                status: (b['status'] ?? 'Pending') as String,
+              ))
+              .toList()
+            ..sort((a, b) => (b.bookingId ?? 0).compareTo(a.bookingId ?? 0));
         });
       }
     } catch (_) {}
@@ -119,6 +129,7 @@ class _owner_dashboardState extends State<owner_dashboard> {
     );
 
     if (result != null && mounted) {
+      setState(() => _isCreatingRoom = true);
       try {
         final room = await OwnerClient.instance.createRoom(
           result.roomType,
@@ -153,6 +164,7 @@ class _owner_dashboardState extends State<owner_dashboard> {
           }
         });
       }
+      if (mounted) setState(() => _isCreatingRoom = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -752,6 +764,17 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF121212),
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(Color(0xFFFF7A00)),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
@@ -788,8 +811,17 @@ class _owner_dashboardState extends State<owner_dashboard> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: () => openRoomForm(),
-                  icon: const Icon(Icons.add, size: 20),
+                  onPressed: _isCreatingRoom ? null : () => openRoomForm(),
+                  icon: _isCreatingRoom
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.add, size: 20),
                   label: const Text(
                     'Add Room',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),

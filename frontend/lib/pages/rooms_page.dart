@@ -56,6 +56,7 @@ class _RoomsPageState extends State<RoomsPage> {
   final List<JammingRoom> rooms = [];
   Profile? _profile;
   int _pendingBookings = 0;
+  bool _isLoadingBookings = false;
 
   @override
   void initState() {
@@ -164,11 +165,17 @@ class _RoomsPageState extends State<RoomsPage> {
   }
 
   Future<void> _showMyBookings() async {
+    setState(() => _isLoadingBookings = true);
     List<Map<String, dynamic>> bookings = [];
     try {
       bookings = await MusicianClient.instance.getMyBookings();
+      bookings.sort((a, b) => (b['booking_id'] ?? 0).compareTo(a['booking_id'] ?? 0));
     } catch (_) {}
-    if (!mounted) return;
+    if (!mounted) {
+      setState(() => _isLoadingBookings = false);
+      return;
+    }
+    setState(() => _isLoadingBookings = false);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -233,12 +240,21 @@ class _RoomsPageState extends State<RoomsPage> {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  onPressed: _showMyBookings,
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 34,
-                  ),
+                  onPressed: _isLoadingBookings ? null : _showMyBookings,
+                  icon: _isLoadingBookings
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 34,
+                        ),
                   tooltip: 'My band bookings',
                   padding: const EdgeInsets.all(8),
                 ),
