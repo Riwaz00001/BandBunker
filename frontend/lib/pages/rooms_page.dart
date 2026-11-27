@@ -2,6 +2,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../clients/musician_client.dart';
+import '../clients/owner_client.dart';
 import '../models/musician_models.dart';
 
 class JammingRoom {
@@ -56,6 +57,30 @@ class _RoomsPageState extends State<RoomsPage> {
   void initState() {
     super.initState();
     _loadProfile();
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    try {
+      final fetched = await OwnerClient.instance.getRooms();
+      final mapped = fetched.map((r) => JammingRoom(
+        name: r.name,
+        location: r.location,
+        type: r.roomType,
+        price: 'NPR ${r.price}',
+        imageUrl: '',
+        rating: '0',
+        reviews: '0',
+        distance: '',
+        facilities: r.timeSlots,
+        available: true,
+      )).toList();
+      if (mounted) setState(() {
+        rooms
+          ..clear()
+          ..addAll(mapped);
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadProfile() async {

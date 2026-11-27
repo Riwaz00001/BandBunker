@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import '../clients/owner_client.dart';
+import '../models/room_models.dart';
 import '../services/token_storage.dart';
 import 'login_page.dart';
 import 'time_pricing.dart';
@@ -23,32 +25,32 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
   RoomData? myRoom;
 
-  final List<BookingRequest> bookingRequests = [
-    BookingRequest(
-      bandName: 'The Midnight Echo',
-      date: '25 Nov 2026',
-      time: '10:00 AM - 12:00 PM',
-      members: 5,
-      message: 'We would like to practise for our upcoming show.',
-    ),
-    BookingRequest(
-      bandName: 'Sound Waves',
-      date: '26 Nov 2026',
-      time: '2:00 PM - 4:00 PM',
-      members: 4,
-      message: 'We need a rehearsal space for our weekend performance.',
-    ),
-    BookingRequest(
-      bandName: 'Neon Strings',
-      date: '27 Nov 2026',
-      time: '5:00 PM - 7:00 PM',
-      members: 3,
-      message: 'Looking forward to booking your rehearsal room.',
-    ),
-  ];
+  final List<BookingRequest> bookingRequests = [];
 
   int get pendingRequests =>
       bookingRequests.where((request) => request.status == 'Pending').length;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRoom();
+  }
+
+  Future<void> _loadRoom() async {
+    try {
+      final rooms = await OwnerClient.instance.getMyRooms();
+      if (rooms.isNotEmpty && mounted) {
+        final r = rooms.first;
+        setState(() {
+          myRoom = RoomData(
+            name: r.name,
+            price: r.price,
+            timeSlots: r.timeSlots,
+          );
+        });
+      }
+    } catch (_) {}
+  }
 
   Future<void> _logout() async {
     await TokenStorage.clearOwnerToken();
@@ -75,9 +77,24 @@ class _owner_dashboardState extends State<owner_dashboard> {
     );
 
     if (result != null && mounted) {
-      setState(() {
-        myRoom = result;
-      });
+      try {
+        final room = await OwnerClient.instance.createRoom(
+          result.roomType,
+          result.price,
+          result.timeSlots,
+        );
+        setState(() {
+          myRoom = RoomData(
+            name: room.name,
+            price: room.price,
+            timeSlots: room.timeSlots,
+          );
+        });
+      } catch (_) {
+        setState(() {
+          myRoom = result;
+        });
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -20,6 +20,7 @@ class login_info(BaseModel):
     password:str
 
 class RoomCreateRequest(BaseModel):
+    room_type: str
     price: str
     selected_slots: List[str]
 
