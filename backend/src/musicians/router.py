@@ -9,7 +9,7 @@ from src.room_owner.dtos import BookingCreateRequest, BookingResponse
 from src.utils.auth import authenticated_musician
 from src.musicians.controller import register_musician,login_musician,create_post,get_my_posts,get_all_posts,get_my_profile,update_profile,get_profile_by_id
 
-musicians_router=APIRouter(prefix="/musicians")
+musicians_router=APIRouter(prefix="/musician")
 
 @musicians_router.post("/bookings",status_code=201)
 def musician_create_booking(payload:BookingCreateRequest,musician=Depends(authenticated_musician),db=Depends(get_db)):
