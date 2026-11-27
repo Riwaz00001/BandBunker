@@ -77,14 +77,32 @@ class _owner_dashboardState extends State<owner_dashboard> {
   }
 
   Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        title: const Text('Logout', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(color: secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: secondaryText)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: orange, foregroundColor: Colors.white),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
     await TokenStorage.clearOwnerToken();
-
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
       );
-
     }
   }
 
@@ -763,6 +781,28 @@ class _owner_dashboardState extends State<owner_dashboard> {
               const SizedBox(height: 13),
 
               buildActionButtons(),
+
+              const SizedBox(height: 18),
+
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () => openRoomForm(),
+                  icon: const Icon(Icons.add, size: 20),
+                  label: const Text(
+                    'Add Room',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 27),
 

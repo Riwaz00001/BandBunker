@@ -163,6 +163,19 @@ class _RoomsPageState extends State<RoomsPage> {
     } catch (_) {}
   }
 
+  Future<void> _showMyBookings() async {
+    List<Map<String, dynamic>> bookings = [];
+    try {
+      bookings = await MusicianClient.instance.getMyBookings();
+    } catch (_) {}
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MyBookingsPage(bookings: bookings),
+      ),
+    );
+  }
   @override
   void dispose() {
     searchController.dispose();
@@ -213,65 +226,21 @@ class _RoomsPageState extends State<RoomsPage> {
                 ),
               ],
             ),
-          ),
+           ),
 
-           GestureDetector(
-             onTap: widget.onProfileTap,
-             child: Container(
-               width: 48,
-               height: 48,
-               decoration: BoxDecoration(
-                 shape: BoxShape.circle,
-                 border: Border.all(
-                   color: orange,
-                   width: 2,
-                 ),
-               ),
-                child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
-                    ? ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: _profile!.profilePicUrl!,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
-                          memCacheWidth: 256,
-                          maxWidthDiskCache: 256,
-                          placeholder: (context, url) => const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          ),
-                          errorWidget: (context, url, stackTrace) => const Icon(
-                            Icons.person_outline,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.person_outline,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-             ),
-             ),
             const SizedBox(width: 12),
             Stack(
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  onPressed: _loadPendingBookings,
+                  onPressed: _showMyBookings,
                   icon: const Icon(
                     Icons.notifications_outlined,
                     color: Colors.white,
-                    size: 28,
+                    size: 34,
                   ),
-                  tooltip: 'Pending booking requests',
+                  tooltip: 'My band bookings',
+                  padding: const EdgeInsets.all(8),
                 ),
                 if (_pendingBookings > 0)
                   Positioned(
@@ -300,6 +269,51 @@ class _RoomsPageState extends State<RoomsPage> {
                     ),
                   ),
               ],
+            ),
+            GestureDetector(
+              onTap: widget.onProfileTap,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: orange,
+                    width: 2,
+                  ),
+                ),
+                 child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
+                     ? ClipOval(
+                         child: CachedNetworkImage(
+                           imageUrl: _profile!.profilePicUrl!,
+                           width: 44,
+                           height: 44,
+                           fit: BoxFit.cover,
+                           memCacheWidth: 256,
+                           maxWidthDiskCache: 256,
+                           placeholder: (context, url) => const SizedBox(
+                             width: 20,
+                             height: 20,
+                             child: Center(
+                               child: CircularProgressIndicator(
+                                 color: Colors.white,
+                                 strokeWidth: 2,
+                               ),
+                             ),
+                           ),
+                           errorWidget: (context, url, stackTrace) => const Icon(
+                             Icons.person_outline,
+                             color: Colors.white,
+                             size: 28,
+                           ),
+                         ),
+                       )
+                     : const Icon(
+                         Icons.person_outline,
+                         color: Colors.white,
+                         size: 28,
+                       ),
+              ),
             ),
         ],
       ),
@@ -681,6 +695,173 @@ class _RoomsPageState extends State<RoomsPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// My band bookings page (musician).
+class MyBookingsPage extends StatefulWidget {
+  final List<Map<String, dynamic>> bookings;
+  const MyBookingsPage({super.key, required this.bookings});
+
+  @override
+  State<MyBookingsPage> createState() => _MyBookingsPageState();
+}
+
+class _MyBookingsPageState extends State<MyBookingsPage> {
+  static const Color cardColor = Color(0xFF202026);
+  static const Color secondaryText = Color(0xFFBDB8C9);
+  static const Color orange = Color(0xFFFF7A00);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'My Band Bookings',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: widget.bookings.isEmpty
+          ? const Center(
+              child: Text(
+                'No bookings yet.',
+                style: TextStyle(color: secondaryText, fontSize: 16),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: widget.bookings.length,
+              itemBuilder: (context, index) {
+                final b = widget.bookings[index];
+                final status = (b['status'] ?? 'Pending') as String;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 15),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.event_note,
+                            color: orange,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              (b['band_name'] ?? 'Band') as String,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: status == 'Accepted'
+                                  ? Colors.green.withValues(alpha: 0.15)
+                                  : status == 'Rejected'
+                                      ? Colors.red.withValues(alpha: 0.15)
+                                      : orange.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(
+                                color: status == 'Accepted'
+                                    ? Colors.greenAccent
+                                    : status == 'Rejected'
+                                        ? Colors.redAccent
+                                        : orange,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.meeting_room,
+                            color: orange,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Text(
+                              (b['room_name'] ?? 'Room') as String,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 11),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            color: orange,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 9),
+                          Text(
+                            b['date'].toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 11),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            color: orange,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 9),
+                          Text(
+                            (b['time_slot'] ?? '') as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }

@@ -46,12 +46,6 @@ def create_room(owner:owners,payload:RoomCreateRequest,db:Session):
     allowed={'Jamming Studio','Rehearsal Room','Recording Studio'}
     if payload.room_type not in allowed:
         raise HTTPException(status_code=400,detail="Invalid room type.")
-    existing=db.query(Room).filter(Room.owner_id==owner.owner_id,Room.room_type==payload.room_type).first()
-    if existing:
-        raise HTTPException(status_code=400,detail="You already created a room of this type.")
-    count=db.query(Room).filter(Room.owner_id==owner.owner_id).count()
-    if count>=3:
-        raise HTTPException(status_code=400,detail="Maximum 3 rooms allowed.")
     room=Room(owner_id=owner.owner_id,name=owner.studio,location=owner.location,room_type=payload.room_type,price=payload.price,time_slots=payload.selected_slots)
     db.add(room)
     db.commit()
