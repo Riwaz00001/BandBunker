@@ -303,6 +303,19 @@ class BandsClient {
     }
   }
 
+  Future<void> createBooking(int roomId, int bandId, DateTime date, String slot) async {
+    try {
+      await _dio.post('/musician/bookings', data: {
+        'room_id': roomId,
+        'band_id': bandId,
+        'date': date.toIso8601String().split('T').first,
+        'time_slot': slot,
+      });
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
   ApiException _mapDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

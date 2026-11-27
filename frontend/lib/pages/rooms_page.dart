@@ -1,11 +1,13 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../clients/bands_client.dart';
 import '../clients/musician_client.dart';
 import '../clients/owner_client.dart';
 import '../models/musician_models.dart';
 
 class JammingRoom {
+  final int roomId;
   final String name;
   final String location;
   final String type;
@@ -18,6 +20,7 @@ class JammingRoom {
   final bool available;
 
   const JammingRoom({
+    required this.roomId,
     required this.name,
     required this.location,
     required this.type,
@@ -64,6 +67,7 @@ class _RoomsPageState extends State<RoomsPage> {
     try {
       final fetched = await OwnerClient.instance.getRooms();
       final mapped = fetched.map((r) => JammingRoom(
+        roomId: r.roomId,
         name: r.name,
         location: r.location,
         type: r.roomType,
@@ -83,6 +87,59 @@ class _RoomsPageState extends State<RoomsPage> {
     } catch (_) {}
   }
 
+  Future<void> _bookRoom(JammingRoom room) async {
+    final bands = await BandsClient.instance.getMyBands();
+    if (bands.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You need to own a band to book.')));
+      return;
+    }
+    int selectedBand = bands.first.bandId;
+    String selectedSlot = room.facilities.isNotEmpty ? room.facilities.first : '';
+    DateTime selectedDate = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setState) {
+          return AlertDialog(
+            title: const Text('Book Slot'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<int>(
+                  value: selectedBand,
+                  items: bands.map((b) => DropdownMenuItem(value: b.bandId, child: Text(b.bandName))).toList(),
+                  onChanged: (v) => setState(() => selectedBand = v ?? selectedBand),
+                ),
+                DropdownButton<String>(
+                  value: selectedSlot,
+                  items: room.facilities.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: (v) => setState(() => selectedSlot = v ?? selectedSlot),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final d = await showDatePicker(context: ctx, initialDate: selectedDate, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 90)));
+                    if (d != null) setState(() => selectedDate = d);
+                  },
+                  child: Text('Date: ${selectedDate.toIso8601String().split('T').first}'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Book')),
+            ],
+          );
+        });
+      },
+    );
+    if (ok != true) return;
+    try {
+      await BandsClient.instance.createBooking(room.roomId, selectedBand, selectedDate, selectedSlot);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking request sent.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
   Future<void> _loadProfile() async {
     try {
       final profile = await MusicianClient.instance.getProfile();
@@ -328,6 +385,14 @@ class _RoomsPageState extends State<RoomsPage> {
                       ),
                     ),
                     const SizedBox(height: 5),
+                    Text(
+                      room.type,
+                      style: const TextStyle(
+                        color: Color(0xFFFFA982),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     Row(
                       children: [
                         const Icon(
@@ -466,49 +531,10 @@ class _RoomsPageState extends State<RoomsPage> {
                 // Rating and Booking
                 Row(
                   children: [
-                    const Icon(
-                      Icons.star,
-                      color: Color(0xFFFFA982),
-                      size: 23,
-                    ),
-
-                    const SizedBox(width: 5),
-
-                    Text(
-                      room.rating,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(width: 5),
-
-                    Expanded(
-                      child: Text(
-                        '(${room.reviews} reviews)',
-                        style: const TextStyle(
-                          color: secondaryText,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-
+                    Expanded(child: Container()),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Room booking will be available soon.',
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.calendar_month,
-                        size: 19,
-                      ),
+                      onPressed: () => _bookRoom(room),
+                      icon: const Icon(Icons.calendar_month, size: 19),
                       label: const Text('Book Slot'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: orange,
