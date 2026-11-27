@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import '../models/owner_models.dart';
+import '../models/room_models.dart';
 import '../services/token_storage.dart';
 import 'musician_client.dart';
 
@@ -53,6 +53,28 @@ class OwnerClient {
     try {
       final response = await _dio.post('/owner/login', data: request.toJson());
       return (response.data as Map<String, dynamic>)['token'] as String;
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<List<Room>> getRooms() async {
+    try {
+      final response = await _dio.get('/rooms');
+      final list = response.data as List;
+      return list.map((e) => Room.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Room> createRoom(String price, List<String> selectedSlots) async {
+    try {
+      final response = await _dio.post('/owner/rooms', data: {
+        'price': price,
+        'selected_slots': selectedSlots,
+      });
+      return Room.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapDioError(e);
     }
