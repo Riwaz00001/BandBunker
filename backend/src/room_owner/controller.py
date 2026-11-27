@@ -90,7 +90,11 @@ def list_owner_bookings(owner:owners,db:Session):
     return db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
 
 def list_musician_bookings(musician:musicians,db:Session):
-    return db.query(Booking).filter(Booking.musician_id==musician.musician_id).all()
+    from src.bands.models import band_members
+    band_ids=[b.band_id for b in db.query(band_members).filter(band_members.musician_id==musician.musician_id).all()]
+    if not band_ids:
+        return []
+    return db.query(Booking).filter(Booking.band_id.in_(band_ids)).all()
     rooms=db.query(Room).filter(Room.owner_id==owner.owner_id).all()
     room_ids=[r.room_id for r in rooms]
     if not room_ids:
