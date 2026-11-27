@@ -89,6 +89,14 @@ def list_owner_bookings(owner:owners,db:Session):
         return []
     return db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
 
+def list_musician_bookings(musician:musicians,db:Session):
+    return db.query(Booking).filter(Booking.musician_id==musician.musician_id).all()
+    rooms=db.query(Room).filter(Room.owner_id==owner.owner_id).all()
+    room_ids=[r.room_id for r in rooms]
+    if not room_ids:
+        return []
+    return db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
+
 def update_booking_status(owner:owners,booking_id:int,status:str,db:Session):
     booking=db.query(Booking).filter(Booking.booking_id==booking_id).first()
     if not booking:

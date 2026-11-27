@@ -2,7 +2,7 @@ from fastapi import APIRouter,Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from src.room_owner.dtos import registration_info,registration_response,login_info,RoomCreateRequest,RoomResponse,BookingCreateRequest,BookingResponse
 from src.utils.db import get_db
-from src.room_owner.controller import register_owner,login_owner,create_room,list_rooms,list_owner_rooms,create_booking,list_owner_bookings,update_booking_status
+from src.room_owner.controller import register_owner,login_owner,create_room,list_rooms,list_owner_rooms,create_booking,list_owner_bookings,update_booking_status,list_musician_bookings
 from src.utils.auth import authenticated_owner,authenticated_musician
 from src.room_owner.models import Room,Booking
 from src.bands.models import bands
@@ -54,7 +54,15 @@ def all_rooms(db:Session=Depends(get_db)):
     rooms=list_rooms(db)
     return [RoomResponse(room_id=r.room_id,owner_id=r.owner_id,name=r.name,location=r.location,room_type=r.room_type,price=r.price,time_slots=r.time_slots) for r in rooms]
 
-@bookings_router.post("",response_model=BookingResponse,status_code=status.HTTP_201_CREATED)
+@bookings_router.get("/mine",response_model=list[BookingResponse])
+def my_bookings(musician=Depends(authenticated_musician),db:Session=Depends(get_db)):
+    bookings=list_musician_bookings(musician,db)
+    out=[]
+    for b in bookings:
+        room=db.query(Room).filter(Room.room_id==b.room_id).first()
+        band=db.query(bands).filter(bands.band_id==b.band_id).first()
+        out.append(BookingResponse(booking_id=b.booking_id,room_id=b.room_id,room_name=room.name if room else "",band_id=b.band_id,band_name=band.band_name if band else "",date=b.date,time_slot=b.time_slot,status=b.status))
+    return out
 def create_booking_endpoint(payload:BookingCreateRequest,musician=Depends(authenticated_musician),db:Session=Depends(get_db)):
     booking,room,band=create_booking(musician,payload,db)
     return BookingResponse(booking_id=booking.booking_id,room_id=booking.room_id,room_name=room.name,band_id=booking.band_id,band_name=band.band_name,date=booking.date,time_slot=booking.time_slot,status=booking.status)

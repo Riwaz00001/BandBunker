@@ -44,6 +44,7 @@ class _owner_dashboardState extends State<owner_dashboard> {
         setState(() {
           myRoom = RoomData(
             name: r.name,
+            roomType: r.roomType,
             price: r.price,
             timeSlots: r.timeSlots,
           );
@@ -86,6 +87,7 @@ class _owner_dashboardState extends State<owner_dashboard> {
         setState(() {
           myRoom = RoomData(
             name: room.name,
+            roomType: room.roomType,
             price: room.price,
             timeSlots: room.timeSlots,
           );
