@@ -81,7 +81,14 @@ class OwnerClient {
     }
   }
 
-  ApiException _mapDioError(DioException error) {
+  Future<Map<String, dynamic>> getOwnerProfile() async {
+    try {
+      final response = await _dio.get('/owner/me');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

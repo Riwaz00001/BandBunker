@@ -12,7 +12,9 @@ owners_router=APIRouter(prefix="/owner")
 rooms_router=APIRouter(prefix="/rooms")
 bookings_router=APIRouter(prefix="/bookings")
 
-@owners_router.post("/register",response_model=registration_response,status_code=status.HTTP_201_CREATED)
+@owners_router.get("/me")
+def me(owner=Depends(authenticated_owner)):
+    return {"name":owner.name,"studio":owner.studio,"location":owner.location,"room_type":owner.room_type,"email":owner.email}
 def register(user:registration_info,db:Session=Depends(get_db)):
     return register_owner(user,db)
 
