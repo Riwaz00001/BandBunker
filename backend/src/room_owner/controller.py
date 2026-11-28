@@ -81,7 +81,7 @@ def list_owner_bookings(owner:owners,db:Session):
     room_ids=[r.room_id for r in rooms]
     if not room_ids:
         return []
-    bookings=db.query(Booking).filter(Booking.room_id.in_(room_ids)).all()
+    bookings=db.query(Booking).filter(Booking.room_id.in_(room_ids)).order_by(Booking.created_at.desc()).all()
     out=[]
     for b in bookings:
         room=db.query(Room).filter(Room.room_id==b.room_id).first()
@@ -106,7 +106,7 @@ def list_musician_bookings(musician:musicians,db:Session):
     band_ids=[b.band_id for b in db.query(band_members).filter(band_members.musician_id==musician.musician_id).all()]
     if not band_ids:
         return []
-    return db.query(Booking).filter(Booking.band_id.in_(band_ids)).all()
+    return db.query(Booking).filter(Booking.band_id.in_(band_ids)).order_by(Booking.created_at.desc()).all()
 
 def update_booking_status(owner:owners,booking_id:int,status:str,db:Session):
     booking=db.query(Booking).filter(Booking.booking_id==booking_id).first()
