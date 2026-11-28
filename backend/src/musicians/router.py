@@ -3,11 +3,18 @@ from sqlalchemy.orm import Session
 from src.musicians.dtos import registration_info,registration_response,login_info,post_response,profile_response,public_profile_response
 from src.musicians.models import musicians,posts,profile_info
 from src.utils.db import get_db
+from src.room_owner.controller import create_booking
+from src.room_owner.models import Room, Booking
+from src.room_owner.dtos import BookingCreateRequest, BookingResponse
 from src.utils.auth import authenticated_musician
 from src.musicians.controller import register_musician,login_musician,create_post,get_my_posts,get_all_posts,get_my_profile,update_profile,get_profile_by_id
 
-
 musicians_router=APIRouter(prefix="/musician")
+
+@musicians_router.post("/bookings",status_code=201)
+def musician_create_booking(payload:BookingCreateRequest,musician=Depends(authenticated_musician),db=Depends(get_db)):
+    booking,room,band=create_booking(musician,payload,db)
+    return {"booking_id":booking.booking_id,"room_id":room.room_id,"room_name":room.name,"band_id":band.band_id,"band_name":band.band_name,"date":booking.date,"time_slot":booking.time_slot,"status":booking.status}
 
 @musicians_router.post("/register",response_model=registration_response,status_code=status.HTTP_201_CREATED)
 def register(user:registration_info,db:Session=Depends(get_db)):

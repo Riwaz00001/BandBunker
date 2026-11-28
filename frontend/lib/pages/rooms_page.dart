@@ -1,10 +1,13 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../clients/bands_client.dart';
 import '../clients/musician_client.dart';
+import '../clients/owner_client.dart';
 import '../models/musician_models.dart';
 
 class JammingRoom {
+  final int roomId;
   final String name;
   final String location;
   final String type;
@@ -17,6 +20,7 @@ class JammingRoom {
   final bool available;
 
   const JammingRoom({
+    required this.roomId,
     required this.name,
     required this.location,
     required this.type,
@@ -51,13 +55,94 @@ class _RoomsPageState extends State<RoomsPage> {
   // Empty until real room information comes from the backend.
   final List<JammingRoom> rooms = [];
   Profile? _profile;
+  int _pendingBookings = 0;
+  bool _isLoadingBookings = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadRooms();
+    _loadPendingBookings();
   }
 
+  Future<void> _loadRooms() async {
+    try {
+      final fetched = await OwnerClient.instance.getRooms();
+      final mapped = fetched.map((r) => JammingRoom(
+        roomId: r.roomId,
+        name: r.name,
+        location: r.location,
+        type: r.roomType,
+        price: 'NPR ${r.price}',
+        imageUrl: '',
+        rating: '0',
+        reviews: '0',
+        distance: '',
+        facilities: r.timeSlots,
+        available: true,
+      )).toList();
+      if (mounted) setState(() {
+        rooms
+          ..clear()
+          ..addAll(mapped);
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _bookRoom(JammingRoom room) async {
+    final bands = await BandsClient.instance.getMyBands();
+    if (bands.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You need to own a band to book.')));
+      return;
+    }
+    int selectedBand = bands.first.bandId;
+    String selectedSlot = room.facilities.isNotEmpty ? room.facilities.first : '';
+    DateTime selectedDate = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setState) {
+          return AlertDialog(
+            title: const Text('Book Slot'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<int>(
+                  value: selectedBand,
+                  items: bands.map((b) => DropdownMenuItem(value: b.bandId, child: Text(b.bandName))).toList(),
+                  onChanged: (v) => setState(() => selectedBand = v ?? selectedBand),
+                ),
+                DropdownButton<String>(
+                  value: selectedSlot,
+                  items: room.facilities.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                  onChanged: (v) => setState(() => selectedSlot = v ?? selectedSlot),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final d = await showDatePicker(context: ctx, initialDate: selectedDate, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 90)));
+                    if (d != null) setState(() => selectedDate = d);
+                  },
+                  child: Text('Date: ${selectedDate.toIso8601String().split('T').first}'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Book')),
+            ],
+          );
+        });
+      },
+    );
+    if (ok != true) return;
+    try {
+      await BandsClient.instance.createBooking(room.roomId, selectedBand, selectedDate, selectedSlot);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking request sent.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
   Future<void> _loadProfile() async {
     try {
       final profile = await MusicianClient.instance.getProfile();
@@ -68,6 +153,36 @@ class _RoomsPageState extends State<RoomsPage> {
     } catch (_) {}
   }
 
+  Future<void> _loadPendingBookings() async {
+    try {
+      final bookings = await MusicianClient.instance.getMyBookings();
+      if (mounted) {
+        setState(() {
+          _pendingBookings = bookings.where((b) => (b['status'] ?? '') == 'Pending').length;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showMyBookings() async {
+    setState(() => _isLoadingBookings = true);
+    List<Map<String, dynamic>> bookings = [];
+    try {
+      bookings = await MusicianClient.instance.getMyBookings();
+      bookings.sort((a, b) => (b['booking_id'] ?? 0).compareTo(a['booking_id'] ?? 0));
+    } catch (_) {}
+    if (!mounted) {
+      setState(() => _isLoadingBookings = false);
+      return;
+    }
+    setState(() => _isLoadingBookings = false);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MyBookingsPage(bookings: bookings),
+      ),
+    );
+  }
   @override
   void dispose() {
     searchController.dispose();
@@ -118,53 +233,104 @@ class _RoomsPageState extends State<RoomsPage> {
                 ),
               ],
             ),
-          ),
+           ),
 
-           GestureDetector(
-             onTap: widget.onProfileTap,
-             child: Container(
-               width: 48,
-               height: 48,
-               decoration: BoxDecoration(
-                 shape: BoxShape.circle,
-                 border: Border.all(
-                   color: orange,
-                   width: 2,
-                 ),
-               ),
-                child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
-                    ? ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: _profile!.profilePicUrl!,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
-                          memCacheWidth: 256,
-                          maxWidthDiskCache: 256,
-                          placeholder: (context, url) => const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            ),
+            const SizedBox(width: 12),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  onPressed: _isLoadingBookings ? null : _showMyBookings,
+                  icon: _isLoadingBookings
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
                           ),
-                          errorWidget: (context, url, stackTrace) => const Icon(
-                            Icons.person_outline,
+                        )
+                      : const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 34,
+                        ),
+                  tooltip: 'My band bookings',
+                  padding: const EdgeInsets.all(8),
+                ),
+                if (_pendingBookings > 0)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: orange,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$_pendingBookings',
+                          style: const TextStyle(
                             color: Colors.white,
-                            size: 28,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      )
-                    : const Icon(
-                        Icons.person_outline,
-                        color: Colors.white,
-                        size: 28,
                       ),
-             ),
-           ),
+                    ),
+                  ),
+              ],
+            ),
+            GestureDetector(
+              onTap: widget.onProfileTap,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: orange,
+                    width: 2,
+                  ),
+                ),
+                 child: (_profile?.profilePicUrl != null && _profile!.profilePicUrl!.isNotEmpty)
+                     ? ClipOval(
+                         child: CachedNetworkImage(
+                           imageUrl: _profile!.profilePicUrl!,
+                           width: 44,
+                           height: 44,
+                           fit: BoxFit.cover,
+                           memCacheWidth: 256,
+                           maxWidthDiskCache: 256,
+                           placeholder: (context, url) => const SizedBox(
+                             width: 20,
+                             height: 20,
+                             child: Center(
+                               child: CircularProgressIndicator(
+                                 color: Colors.white,
+                                 strokeWidth: 2,
+                               ),
+                             ),
+                           ),
+                           errorWidget: (context, url, stackTrace) => const Icon(
+                             Icons.person_outline,
+                             color: Colors.white,
+                             size: 28,
+                           ),
+                         ),
+                       )
+                     : const Icon(
+                         Icons.person_outline,
+                         color: Colors.white,
+                         size: 28,
+                       ),
+              ),
+            ),
         ],
       ),
     );
@@ -303,6 +469,14 @@ class _RoomsPageState extends State<RoomsPage> {
                       ),
                     ),
                     const SizedBox(height: 5),
+                    Text(
+                      room.type,
+                      style: const TextStyle(
+                        color: Color(0xFFFFA982),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     Row(
                       children: [
                         const Icon(
@@ -441,49 +615,10 @@ class _RoomsPageState extends State<RoomsPage> {
                 // Rating and Booking
                 Row(
                   children: [
-                    const Icon(
-                      Icons.star,
-                      color: Color(0xFFFFA982),
-                      size: 23,
-                    ),
-
-                    const SizedBox(width: 5),
-
-                    Text(
-                      room.rating,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(width: 5),
-
-                    Expanded(
-                      child: Text(
-                        '(${room.reviews} reviews)',
-                        style: const TextStyle(
-                          color: secondaryText,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-
+                    Expanded(child: Container()),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Room booking will be available soon.',
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.calendar_month,
-                        size: 19,
-                      ),
+                      onPressed: () => _bookRoom(room),
+                      icon: const Icon(Icons.calendar_month, size: 19),
                       label: const Text('Book Slot'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: orange,
@@ -576,6 +711,173 @@ class _RoomsPageState extends State<RoomsPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// My band bookings page (musician).
+class MyBookingsPage extends StatefulWidget {
+  final List<Map<String, dynamic>> bookings;
+  const MyBookingsPage({super.key, required this.bookings});
+
+  @override
+  State<MyBookingsPage> createState() => _MyBookingsPageState();
+}
+
+class _MyBookingsPageState extends State<MyBookingsPage> {
+  static const Color cardColor = Color(0xFF202026);
+  static const Color secondaryText = Color(0xFFBDB8C9);
+  static const Color orange = Color(0xFFFF7A00);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'My Band Bookings',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: widget.bookings.isEmpty
+          ? const Center(
+              child: Text(
+                'No bookings yet.',
+                style: TextStyle(color: secondaryText, fontSize: 16),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: widget.bookings.length,
+              itemBuilder: (context, index) {
+                final b = widget.bookings[index];
+                final status = (b['status'] ?? 'Pending') as String;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 15),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.event_note,
+                            color: orange,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              (b['band_name'] ?? 'Band') as String,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: status == 'Accepted'
+                                  ? Colors.green.withValues(alpha: 0.15)
+                                  : status == 'Rejected'
+                                      ? Colors.red.withValues(alpha: 0.15)
+                                      : orange.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(
+                                color: status == 'Accepted'
+                                    ? Colors.greenAccent
+                                    : status == 'Rejected'
+                                        ? Colors.redAccent
+                                        : orange,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.meeting_room,
+                            color: orange,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Text(
+                              (b['room_name'] ?? 'Room') as String,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 11),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            color: orange,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 9),
+                          Text(
+                            b['date'].toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 11),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            color: orange,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 9),
+                          Text(
+                            (b['time_slot'] ?? '') as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }

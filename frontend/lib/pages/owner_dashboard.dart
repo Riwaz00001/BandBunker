@@ -1,5 +1,7 @@
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../clients/owner_client.dart';
 import '../services/token_storage.dart';
 import 'login_page.dart';
 import 'time_pricing.dart';
@@ -21,44 +23,96 @@ class _owner_dashboardState extends State<owner_dashboard> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
-  RoomData? myRoom;
+  List<RoomData> myRooms = [];
 
-  final List<BookingRequest> bookingRequests = [
-    BookingRequest(
-      bandName: 'The Midnight Echo',
-      date: '25 Nov 2026',
-      time: '10:00 AM - 12:00 PM',
-      members: 5,
-      message: 'We would like to practise for our upcoming show.',
-    ),
-    BookingRequest(
-      bandName: 'Sound Waves',
-      date: '26 Nov 2026',
-      time: '2:00 PM - 4:00 PM',
-      members: 4,
-      message: 'We need a rehearsal space for our weekend performance.',
-    ),
-    BookingRequest(
-      bandName: 'Neon Strings',
-      date: '27 Nov 2026',
-      time: '5:00 PM - 7:00 PM',
-      members: 3,
-      message: 'Looking forward to booking your rehearsal room.',
-    ),
-  ];
+  List<BookingRequest> bookingRequests = [];
+
+  bool _isLoading = true;
+  bool _isCreatingRoom = false;
 
   int get pendingRequests =>
       bookingRequests.where((request) => request.status == 'Pending').length;
 
-  Future<void> _logout() async {
-    await TokenStorage.clearOwnerToken();
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+    _loadBookings();
+  }
 
+  Future<void> _loadRooms() async {
+    try {
+      setState(() => _isLoading = true);
+      final rooms = await OwnerClient.instance.getMyRooms();
+      if (mounted) {
+        setState(() {
+          myRooms = rooms
+              .map(
+                (r) => RoomData(
+                  name: r.name,
+                  roomType: r.roomType,
+                  price: r.price,
+                  timeSlots: r.timeSlots,
+                ),
+              )
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadBookings() async {
+    try {
+      final bookings = await OwnerClient.instance.getOwnerBookings();
+      if (mounted) {
+        setState(() {
+          bookingRequests = bookings
+              .map((b) => BookingRequest(
+                bookingId: b['booking_id'] as int?,
+                bandName: (b['band_name'] ?? '') as String,
+                date: b['date'].toString(),
+                time: (b['time_slot'] ?? '') as String,
+                members: (b['band_member_count'] as int? ?? 0),
+                profilePic: (b['band_profile_pic'] as String?),
+                status: (b['status'] ?? 'Pending') as String,
+              ))
+              .toList()
+            ..sort((a, b) => (b.bookingId ?? 0).compareTo(a.bookingId ?? 0));
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        title: const Text('Logout', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(color: secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: secondaryText)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: orange, foregroundColor: Colors.white),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    await TokenStorage.clearOwnerToken();
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
       );
-
     }
   }
 
@@ -75,9 +129,42 @@ class _owner_dashboardState extends State<owner_dashboard> {
     );
 
     if (result != null && mounted) {
-      setState(() {
-        myRoom = result;
-      });
+      setState(() => _isCreatingRoom = true);
+      try {
+        final room = await OwnerClient.instance.createRoom(
+          result.roomType,
+          result.price,
+          result.timeSlots,
+        );
+        setState(() {
+          final roomData = RoomData(
+            name: room.name,
+            roomType: room.roomType,
+            price: room.price,
+            timeSlots: room.timeSlots,
+          );
+          if (existingRoom != null) {
+            final idx = myRooms.indexWhere((r) => identical(r, existingRoom));
+            if (idx >= 0) {
+              myRooms[idx] = roomData;
+            }
+          } else {
+            myRooms.add(roomData);
+          }
+        });
+      } catch (_) {
+        setState(() {
+          if (existingRoom != null) {
+            final idx = myRooms.indexWhere((r) => identical(r, existingRoom));
+            if (idx >= 0) {
+              myRooms[idx] = result;
+            }
+          } else {
+            myRooms.add(result);
+          }
+        });
+      }
+      if (mounted) setState(() => _isCreatingRoom = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -209,7 +296,7 @@ class _owner_dashboardState extends State<owner_dashboard> {
               child: _statCard(
                 icon: Icons.meeting_room_outlined,
                 title: 'My Rooms',
-                value: myRoom == null ? '0' : '1',
+                value: myRooms.length.toString(),
               ),
             ),
 
@@ -280,15 +367,15 @@ class _owner_dashboardState extends State<owner_dashboard> {
         Expanded(
           child: _actionCard(
             icon: Icons.add_business_rounded,
-            title: myRoom == null ? 'Register Room' : 'My Room',
-            subtitle: myRoom == null
+            title: myRooms.isEmpty ? 'Register Room' : 'My Rooms',
+            subtitle: myRooms.isEmpty
                 ? 'Add your rehearsal room'
-                : 'View and edit your room',
+                : 'View and edit your rooms',
             onTap: () {
-              if (myRoom == null) {
+              if (myRooms.isEmpty) {
                 openRoomForm();
               } else {
-                showRoomDetails();
+                showAllRooms();
               }
             },
           ),
@@ -391,9 +478,9 @@ class _owner_dashboardState extends State<owner_dashboard> {
     );
   }
 
-  // Registered room preview on dashboard.
+  // Registered rooms preview on dashboard.
   Widget buildRoomPreview() {
-    if (myRoom == null) {
+    if (myRooms.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
@@ -469,9 +556,9 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
               const SizedBox(width: 9),
 
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'YOUR REGISTERED ROOM',
+                  'YOUR REGISTERED ROOMS',
                   style: TextStyle(
                     color: orange,
                     fontSize: 11,
@@ -481,57 +568,99 @@ class _owner_dashboardState extends State<owner_dashboard> {
                 ),
               ),
 
-              IconButton(
-                onPressed: () => openRoomForm(existingRoom: myRoom),
-                icon: const Icon(
-                  Icons.edit_outlined,
+              Text(
+                '${myRooms.length}',
+                style: const TextStyle(
                   color: Colors.white,
-                  size: 20,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
                 ),
-                tooltip: 'Edit room',
               ),
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-          Text(
-            myRoom!.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          ...myRooms.map((room) => _roomPreviewCard(room)),
+        ],
+      ),
+    );
+  }
+
+  Widget _roomPreviewCard(RoomData room) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF303039),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.meeting_room,
+                color: orange,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      room.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        room.roomType,
+                        style: const TextStyle(
+                          color: orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => openRoomForm(existingRoom: room),
+                icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 20),
+                tooltip: 'Edit room',
+              ),
+            ],
           ),
-
-          const SizedBox(height: 8),
-
+          const SizedBox(height: 10),
           Text(
-            'NPR ${myRoom!.price} / hour',
+            'NPR ${room.price} / hour',
             style: const TextStyle(
               color: orange,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),
-
-          const SizedBox(height: 18),
-
-          const Text(
-            'Available Time Slots',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-
           const SizedBox(height: 10),
-
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: myRoom!.timeSlots.map((slot) {
+            children: room.timeSlots.map((slot) {
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -554,30 +683,13 @@ class _owner_dashboardState extends State<owner_dashboard> {
               );
             }).toList(),
           ),
-
-          const SizedBox(height: 15),
-
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: showRoomDetails,
-              icon: const Icon(Icons.visibility_outlined, size: 18),
-              label: const Text('View Room Information'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: orange,
-                side: const BorderSide(color: orange),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  // Full room details.
-  void showRoomDetails() {
-    if (myRoom == null) return;
-
+  // All rooms list sheet.
+  void showAllRooms() {
     showModalBottomSheet(
       context: context,
       backgroundColor: cardColor,
@@ -592,68 +704,38 @@ class _owner_dashboardState extends State<owner_dashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Room Information',
+                'My Rooms',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 21,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              _detailRow('Room Name', myRoom!.name),
-              _detailRow('Price Per Hour', 'NPR ${myRoom!.price}'),
-
-              const SizedBox(height: 15),
-
-              const Text(
-                'Available Time Slots',
-                style: TextStyle(
-                  color: orange,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              ...myRoom!.timeSlots.map(
-                    (slot) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        color: orange,
-                        size: 17,
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        slot,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+              ...myRooms.map(
+                (room) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    room.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    openRoomForm(existingRoom: myRoom);
-                  },
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit Room'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: orange,
-                    foregroundColor: Colors.white,
+                  subtitle: Text(
+                    '${room.roomType} \u2022 NPR ${room.price}/hr',
+                    style: const TextStyle(
+                      color: secondaryText,
+                      fontSize: 13,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: orange),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      openRoomForm(existingRoom: room);
+                    },
                   ),
                 ),
               ),
@@ -664,45 +746,16 @@ class _owner_dashboardState extends State<owner_dashboard> {
     );
   }
 
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 13),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: secondaryText,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Booking requests page.
-  void showBookingRequests() {
+  void showBookingRequests() async {
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BookingRequestsPage(
-          requests: bookingRequests,
+          requests: List.of(bookingRequests),
           onChanged: () {
-            if (mounted) setState(() {});
+            if (mounted) setState(() => _loadBookings());
           },
         ),
       ),
@@ -711,6 +764,17 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF121212),
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(Color(0xFFFF7A00)),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
@@ -741,13 +805,44 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
               buildActionButtons(),
 
+              const SizedBox(height: 18),
+
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _isCreatingRoom ? null : () => openRoomForm(),
+                  icon: _isCreatingRoom
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.add, size: 20),
+                  label: const Text(
+                    'Add Room',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 27),
 
               Row(
                 children: [
                   const Expanded(
                     child: Text(
-                      'My Rehearsal Room',
+                      'My Rehearsal Rooms',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -756,10 +851,9 @@ class _owner_dashboardState extends State<owner_dashboard> {
                     ),
                   ),
 
-                  if (myRoom != null)
+                  if (myRooms.isNotEmpty)
                     TextButton.icon(
-                      onPressed: () =>
-                          openRoomForm(existingRoom: myRoom),
+                      onPressed: showAllRooms,
                       icon: const Icon(Icons.edit, size: 15),
                       label: const Text('Edit'),
                       style: TextButton.styleFrom(
@@ -857,19 +951,21 @@ class _owner_dashboardState extends State<owner_dashboard> {
 
 // Booking request model for the frontend.
 class BookingRequest {
+  final int? bookingId;
   final String bandName;
   final String date;
   final String time;
   final int members;
-  final String message;
+  final String? profilePic;
   String status;
 
   BookingRequest({
+    this.bookingId,
     required this.bandName,
     required this.date,
     required this.time,
     required this.members,
-    required this.message,
+    this.profilePic,
     this.status = 'Pending',
   });
 }
@@ -895,7 +991,12 @@ class _BookingRequestsPageState extends State<BookingRequestsPage> {
   static const Color cardColor = Color(0xFF202026);
   static const Color secondaryText = Color(0xFFBDB8C9);
 
-  void updateRequest(BookingRequest request, String status) {
+  void updateRequest(BookingRequest request, String status) async {
+    if (request.bookingId != null) {
+      try {
+        await OwnerClient.instance.updateBookingStatus(request.bookingId!, status);
+      } catch (_) {}
+    }
     setState(() {
       request.status = status;
     });
@@ -928,17 +1029,24 @@ class _BookingRequestsPageState extends State<BookingRequestsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 23,
-                backgroundColor: orange.withValues(alpha: 0.15),
-                child: const Icon(
-                  Icons.groups,
-                  color: orange,
-                  size: 25,
-                ),
-              ),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 23,
+                    backgroundColor: orange.withValues(alpha: 0.15),
+                    backgroundImage:
+                        request.profilePic != null && request.profilePic!.isNotEmpty
+                            ? CachedNetworkImageProvider(request.profilePic!)
+                            : null,
+                    child: request.profilePic == null ||
+                            request.profilePic!.isEmpty
+                        ? const Icon(
+                            Icons.groups,
+                            color: orange,
+                            size: 25,
+                          )
+                        : null,
+                  ),
 
               const SizedBox(width: 12),
 
@@ -1036,26 +1144,6 @@ class _BookingRequestsPageState extends State<BookingRequestsPage> {
           ),
 
           const SizedBox(height: 15),
-
-          const Text(
-            'Message from band',
-            style: TextStyle(
-              color: orange,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            request.message,
-            style: const TextStyle(
-              color: secondaryText,
-              fontSize: 12,
-              height: 1.5,
-            ),
-          ),
 
           if (isPending) ...[
             const SizedBox(height: 18),

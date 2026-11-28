@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/owner_models.dart';
+import '../models/room_models.dart';
 import '../services/token_storage.dart';
 import 'musician_client.dart';
 
@@ -58,6 +59,63 @@ class OwnerClient {
     }
   }
 
+  Future<List<Room>> getMyRooms() async {
+    try {
+      final response = await _dio.get('/owner/rooms');
+      final list = response.data as List;
+      return list.map((e) => Room.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+  Future<List<Room>> getRooms() async {
+    try {
+      final response = await _dio.get('/rooms');
+      final list = response.data as List;
+      return list.map((e) => Room.fromJson(e as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Room> createRoom(String roomType, String price, List<String> selectedSlots) async {
+    try {
+      final response = await _dio.post('/owner/rooms', data: {
+        'room_type': roomType,
+        'price': price,
+        'selected_slots': selectedSlots,
+      });
+      return Room.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> getOwnerProfile() async {
+    try {
+      final response = await _dio.get('/owner/me');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+  Future<List<Map<String, dynamic>>> getOwnerBookings() async {
+    try {
+      final response = await _dio.get('/owner/bookings');
+      final list = response.data as List;
+      return list.map((e) => e as Map<String, dynamic>).toList();
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<void> updateBookingStatus(int bookingId, String status) async {
+    try {
+      await _dio.patch('/owner/bookings/$bookingId', queryParameters: {'status': status});
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
   ApiException _mapDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:

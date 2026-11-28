@@ -1,15 +1,18 @@
 
 import 'package:flutter/material.dart';
+import '../clients/owner_client.dart';
+
 
 // Room model shared with the owner dashboard.
 class RoomData {
   final String name;
+  final String roomType;
   final String price;
   final List<String> timeSlots;
 
   RoomData({
     required this.name,
-
+    required this.roomType,
     required this.price,
     required this.timeSlots,
   });
@@ -49,11 +52,12 @@ class _TimePricingPageState extends State<TimePricingPage> {
 
   final Set<String> selectedSlots = {};
 
-  String get studioName {
-    if (widget.studioName.trim().isNotEmpty) {
-      return widget.studioName.trim();
-    }
+  String _studioName = '';
+  String _roomType = 'Jamming Studio';
 
+  String get studioName {
+    if (_studioName.trim().isNotEmpty) return _studioName.trim();
+    if (widget.studioName.trim().isNotEmpty) return widget.studioName.trim();
     return widget.existingRoom?.name ?? '';
   }
 
@@ -66,6 +70,15 @@ class _TimePricingPageState extends State<TimePricingPage> {
     if (widget.existingRoom != null) {
       selectedSlots.addAll(widget.existingRoom!.timeSlots);
     }
+
+    _loadStudioName();
+  }
+
+  Future<void> _loadStudioName() async {
+    try {
+      final data = await OwnerClient.instance.getOwnerProfile();
+      if (mounted) setState(() => _studioName = (data['studio'] ?? '') as String);
+    } catch (_) {}
   }
 
   @override
@@ -133,6 +146,7 @@ class _TimePricingPageState extends State<TimePricingPage> {
 
     final room = RoomData(
       name: studioName,
+      roomType: _roomType,
       price: price,
       timeSlots: availableSlots
           .where((slot) => selectedSlots.contains(slot))
@@ -334,6 +348,23 @@ class _TimePricingPageState extends State<TimePricingPage> {
               sectionTitle('Studio Name'),
               const SizedBox(height: 10),
               buildStudioName(),
+
+              const SizedBox(height: 25),
+
+              sectionTitle('Room Type'),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: _roomType,
+                dropdownColor: const Color(0xFF303039),
+                style: const TextStyle(color: Colors.white),
+                decoration: inputDecoration('Select room type', Icons.meeting_room),
+                items: const [
+                  DropdownMenuItem(value: 'Jamming Studio', child: Text('Jamming Studio')),
+                  DropdownMenuItem(value: 'Rehearsal Room', child: Text('Rehearsal Room')),
+                  DropdownMenuItem(value: 'Recording Studio', child: Text('Recording Studio')),
+                ],
+                onChanged: (v) => setState(() => _roomType = v ?? _roomType),
+              ),
 
               const SizedBox(height: 25),
 
